@@ -1,7 +1,3 @@
-(function(){science = {version: "0.0.2"}; // semver
-science.functor = function(v) {
-  return typeof v === "function" ? v : function() { return v; };
-};
 // Based on:
 // http://www.johndcook.com/blog/2010/06/02/whats-so-hard-about-finding-a-hypotenuse/
 science.hypot = function(x, y) {
@@ -14,4 +10,3 @@ science.hypot = function(x, y) {
   var r = min / max;
   return max * Math.sqrt(1 + r * r);
 }
-})()

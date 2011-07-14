@@ -14,7 +14,8 @@ all: \
 
 science.core.js: \
 	src/core/core.js \
-	src/core/functor.js
+	src/core/functor.js \
+	src/core/hypot.js
 
 science.stats.js: \
 	src/start.js \
@@ -31,6 +32,7 @@ science.stats.js: \
 	src/end.js
 
 tests: \
+	tests/test-hypot.test \
 	tests/test-stats-bandwidth.test \
 	tests/test-stats-iqr.test \
 	tests/test-stats-mean.test \
