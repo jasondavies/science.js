@@ -4,6 +4,8 @@ JS_COMPILER = \
 all: \
 	science.js \
 	science.min.js \
+	science.lin.js \
+	science.lin.min.js \
 	science.stats.js \
 	science.stats.min.js
 
@@ -16,6 +18,12 @@ science.core.js: \
 	src/core/core.js \
 	src/core/functor.js \
 	src/core/hypot.js
+
+science.lin.js: \
+	src/start.js \
+	src/lin/lin.js \
+	src/lin/tridag.js \
+	src/end.js
 
 science.stats.js: \
 	src/start.js \

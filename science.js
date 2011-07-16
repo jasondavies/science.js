@@ -1,4 +1,4 @@
-(function(){science = {version: "1.0.0"}; // semver
+(function(){science = {version: "1.1.0"}; // semver
 science.functor = function(v) {
   return typeof v === "function" ? v : function() { return v; };
 };
