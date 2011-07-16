@@ -13,5 +13,5 @@ science.hypot = function(x, y) {
   else       { max = y; min = x; }
   var r = min / max;
   return max * Math.sqrt(1 + r * r);
-}
+};
 })()
