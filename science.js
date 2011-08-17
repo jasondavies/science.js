@@ -1,4 +1,4 @@
-(function(){science = {version: "1.1.0"}; // semver
+(function(){science = {version: "1.2.0"}; // semver
 science.functor = function(v) {
   return typeof v === "function" ? v : function() { return v; };
 };
@@ -13,5 +13,18 @@ science.hypot = function(x, y) {
   else       { max = y; min = x; }
   var r = min / max;
   return max * Math.sqrt(1 + r * r);
+};
+// Constructs a multi-dimensional array filled with zeroes.
+science.zeroes = function(n) {
+  var i = -1,
+      a = [];
+  if (arguments.length === 1)
+    while (++i < n)
+      a[i] = 0;
+  else
+    while (++i < n)
+      a[i] = science.zeroes.apply(
+        this, Array.prototype.slice.call(arguments, 1));
+  return a;
 };
 })()

@@ -17,7 +17,8 @@ all: \
 science.core.js: \
 	src/core/core.js \
 	src/core/functor.js \
-	src/core/hypot.js
+	src/core/hypot.js \
+	src/core/zeroes.js
 
 science.lin.js: \
 	src/start.js \
@@ -39,13 +40,8 @@ science.stats.js: \
 	src/stats/variance.js \
 	src/end.js
 
-tests: \
-	tests/test-hypot.test \
-	tests/test-stats-bandwidth.test \
-	tests/test-stats-iqr.test \
-	tests/test-stats-mean.test \
-	tests/test-stats-median.test \
-	tests/test-stats-variance.test
+test: all
+	@vows
 
 %.min.js: %.js Makefile
 	@rm -f $@
