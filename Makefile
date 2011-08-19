@@ -1,5 +1,5 @@
-JS_COMPILER = \
-	./lib/uglifyjs/bin/uglifyjs
+JS_COMPILER = ./node_modules/uglify-js/bin/uglifyjs
+JS_TESTER = ./node_modules/vows/bin/vows
 
 all: \
 	science.js \
@@ -33,6 +33,7 @@ science.stats.js: \
 	src/stats/kernel.js \
 	src/stats/kde.js \
 	src/stats/iqr.js \
+	src/stats/loess.js \
 	src/stats/mean.js \
 	src/stats/median.js \
 	src/stats/mode.js \
@@ -41,7 +42,7 @@ science.stats.js: \
 	src/end.js
 
 test: all
-	@vows
+	@$(JS_TESTER)
 
 %.min.js: %.js Makefile
 	@rm -f $@
