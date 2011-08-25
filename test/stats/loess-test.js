@@ -87,8 +87,8 @@ suite.addBatch({
       generateSineData(numPoints, xval, yval, xnoise, ynoise);
 
       // Introduce a couple of outliers
-      yval[numPoints / 3] *= 100;
-      yval[2 * numPoints / 3] *= -100;
+      yval[Math.floor(numPoints / 3)] *= 100;
+      yval[Math.floor(2 * numPoints / 3)] *= -100;
 
       // Check that variance decreases as the number of robustness
       // iterations increases
@@ -103,7 +103,7 @@ suite.addBatch({
         }
       }
 
-      for (var i = 2; i < variances.length; ++i) {
+      for (var i = 1; i < variances.length; ++i) {
         assert.isTrue(variances[i] < variances[i - 1]);
       }
     },
