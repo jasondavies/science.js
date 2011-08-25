@@ -143,6 +143,12 @@ science.stats.loess = function() {
     return smooth;
   };
 
+  smooth.accuracy = function(x) {
+    if (!arguments.length) return x;
+    accuracy = x;
+    return smooth;
+  };
+
   return smooth;
 };
 
