@@ -7,7 +7,8 @@ all: \
 	science.lin.js \
 	science.lin.min.js \
 	science.stats.js \
-	science.stats.min.js
+	science.stats.min.js \
+	package.json
 
 .INTERMEDIATE science.js: \
 	src/start.js \
@@ -50,6 +51,9 @@ test: all
 %.min.js: %.js Makefile
 	@rm -f $@
 	$(JS_COMPILER) < $< > $@
+
+package.json: science.js
+	node src/package.js > $@
 
 science.js science%.js: Makefile
 	@rm -f $@
