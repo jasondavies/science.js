@@ -21,6 +21,34 @@ suite.addBatch({
       assert.equal(manhattan([0], [1]), 1);
       assert.equal(manhattan([0, 0], [1, 1]), 2);
       assert.equal(manhattan([0, 0, 0], [1, 1, 1]), 3);
+    },
+    "hamming": function() {
+      var hamming = science.stats.distance.hamming;
+      assert.equal(hamming([], []), 0);
+      assert.equal(hamming([0], [1]), 1);
+      assert.equal(hamming([0, 1], [1, 1]), 1);
+      assert.equal(hamming([3, 2, 1], [1, 2, 3]), 2);
+    },
+    "minkowski": function() {
+      var minkowski = science.stats.distance.minkowski(.5);
+      assert.equal(minkowski([], []), 0);
+      assert.equal(minkowski([0], [1]), 1);
+      assert.equal(minkowski([0, 1], [1, 1]), 1);
+      assert.equal(minkowski([1, 2, 3], [1, 2, 3]), 0);
+    },
+    "chebyshev": function() {
+      var chebyshev = science.stats.distance.chebyshev;
+      assert.equal(chebyshev([], []), 0);
+      assert.equal(chebyshev([0], [1]), 1);
+      assert.equal(chebyshev([0, 1], [1, 1]), 1);
+      assert.equal(chebyshev([3, 2, 1], [1, 2, 3]), 2);
+    },
+    "jaccard": function() {
+      var jaccard = science.stats.distance.jaccard;
+      assert.isTrue(isNaN(jaccard([], [])));
+      assert.equal(jaccard([0], [1]), 0);
+      assert.equal(jaccard([0, 1], [1, 1]), .5);
+      assert.equal(jaccard([3, 2, 1, 0], [1, 2, 3, 4]), .25);
     }
   }
 });
