@@ -84,7 +84,7 @@ science.stats.kmeans = function() {
   };
 
   return kmeans;
-}
+};
 
 function science_stats_kmeansCompare(a, b) {
   if (!a || !b || a.length !== b.length) return false;
