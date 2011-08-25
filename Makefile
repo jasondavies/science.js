@@ -30,8 +30,10 @@ science.stats.js: \
 	src/start.js \
 	src/stats/stats.js \
 	src/stats/bandwidth.js \
+	src/stats/distance.js \
 	src/stats/kernel.js \
 	src/stats/kde.js \
+	src/stats/kmeans.js \
 	src/stats/iqr.js \
 	src/stats/loess.js \
 	src/stats/mean.js \
