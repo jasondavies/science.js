@@ -1,6 +1,6 @@
 {
   "name": "science.js",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "Scientific and statistical computing in JavaScript.",
   "keywords": ["science", "statistics", "mathematics"],
   "homepage": "https://github.com/jasondavies/science.js",
