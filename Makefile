@@ -34,6 +34,7 @@ science.stats.js: \
 	src/stats/kernel.js \
 	src/stats/kde.js \
 	src/stats/kmeans.js \
+	src/stats/hcluster.js \
 	src/stats/iqr.js \
 	src/stats/loess.js \
 	src/stats/mean.js \
