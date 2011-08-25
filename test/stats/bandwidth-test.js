@@ -4,7 +4,7 @@ require("../../science.stats");
 var vows = require("vows"),
     assert = require("assert");
 
-var suite = vows.describe("science.bandwidth");
+var suite = vows.describe("science.stats.bandwidth");
 
 suite.addBatch({
   "bandwidth": {

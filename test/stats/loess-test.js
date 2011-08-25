@@ -4,7 +4,7 @@ require("../../science.stats");
 var vows = require("vows"),
     assert = require("assert");
 
-var suite = vows.describe("science.loess");
+var suite = vows.describe("science.stats.loess");
 
 var loess = science.stats.loess();
 
