@@ -12,18 +12,16 @@
  * @param {number} n
  */
 science.lin.tridag = function(a, b, c, d, x, n) {
-  c[0] /= b[0];
-  d[0] /= b[0];
   var i,
-      id;
+      m;
   for (i = 1; i < n; i++) {
-    id = 1 / (b[i] - c[i-1] * a[i]);
-    c[i] *= id;
-    d[i] = (d[i] - d[i - 1] * a[i]) * id;
+    m = a[i] / b[i - 1];
+    b[i] -= m * c[i - 1];
+    d[i] -= m * d[i - 1];
   }
-  x[n] = d[n];
+  x[n - 1] = d[n - 1] / b[n - 1];
   for (i = n - 2; i >= 0; i--) {
-    x[i] = d[i] - c[i] * x[i + 1];
+    x[i] = (d[i] - c[i] * x[i + 1]) / b[i];
   }
 };
 })()
