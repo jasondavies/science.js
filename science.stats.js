@@ -95,6 +95,9 @@ science.stats.erf = function(x) {
     1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1)
     * t * Math.exp(-x * x));
 };
+science.stats.phi = function(x) {
+  return .5 * (1 + science.stats.erf(x / Math.SQRT2));
+};
 // See <http://en.wikipedia.org/wiki/Kernel_(statistics)>.
 science.stats.kernel = {
   uniform: function(u) {
