@@ -387,6 +387,12 @@ science.stats.hcluster = function() {
     return root;
   }
 
+  hcluster.distance = function(x) {
+    if (!arguments.length) return distance;
+    distance = x;
+    return hcluster;
+  };
+
   return hcluster;
 };
 
