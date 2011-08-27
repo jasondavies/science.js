@@ -21,6 +21,7 @@ science.core.js: \
 	src/core/expm1.js \
 	src/core/functor.js \
 	src/core/hypot.js \
+	src/core/quadratic.js \
 	src/core/zeroes.js
 
 science.vector.js: \
