@@ -24,6 +24,7 @@ science.core.js: \
 
 science.vector.js: \
 	src/vector/vector.js \
+	src/vector/decompose.js \
 	src/vector/cross.js \
 	src/vector/dot.js \
 	src/vector/length.js \
@@ -65,7 +66,7 @@ test: all
 	@rm -f $@
 	$(JS_COMPILER) < $< > $@
 
-package.json: science.js
+package.json: science.js src/package.js
 	node src/package.js > $@
 
 science.js science%.js: Makefile
