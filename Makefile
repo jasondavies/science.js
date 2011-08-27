@@ -65,7 +65,7 @@ test: all
 	@rm -f $@
 	$(JS_COMPILER) < $< > $@
 
-package.json: science.js
+package.json: science.js src/package.js
 	node src/package.js > $@
 
 science.js science%.js: Makefile

@@ -10,6 +10,6 @@ require("util").puts(JSON.stringify({
   "repository": {"type": "git", "url": "http://github.com/jasondavies/science.js.git"},
   "dependencies": {
     "uglify-js": "1.0.6",
-    "vows": "0.5.10"
+    "vows": "0.5.11"
   }
 }, null, 2));
