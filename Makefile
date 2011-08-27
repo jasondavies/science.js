@@ -45,6 +45,7 @@ science.stats.js: \
 	src/stats/stats.js \
 	src/stats/bandwidth.js \
 	src/stats/distance.js \
+	src/stats/erf.js \
 	src/stats/kernel.js \
 	src/stats/kde.js \
 	src/stats/kmeans.js \
