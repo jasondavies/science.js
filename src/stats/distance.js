@@ -50,5 +50,20 @@ science.stats.distance = {
         s = 0;
     while (++i < n) if (a[i] === b[i]) s++;
     return s / n;
+  },
+  braycurtis: function(a, b) {
+    var n = a.length,
+        i = -1,
+        s0 = 0,
+        s1 = 0,
+        ai,
+        bi;
+    while (++i < n) {
+      ai = a[i];
+      bi = b[i];
+      s0 += Math.abs(ai - bi);
+      s1 += Math.abs(ai + bi);
+    }
+    return s0 / s1;
   }
 };

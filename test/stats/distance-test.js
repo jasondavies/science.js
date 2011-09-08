@@ -49,6 +49,13 @@ suite.addBatch({
       assert.equal(jaccard([0], [1]), 0);
       assert.equal(jaccard([0, 1], [1, 1]), .5);
       assert.equal(jaccard([3, 2, 1, 0], [1, 2, 3, 4]), .25);
+    },
+    "braycurtis": function() {
+      var braycurtis = science.stats.distance.braycurtis;
+      assert.isTrue(isNaN(braycurtis([], [])));
+      assert.equal(braycurtis([0], [1]), 1);
+      assert.equal(braycurtis([0, 1], [1, 1]), 1 / 3);
+      assert.equal(braycurtis([3, 2, 1, 0], [1, 2, 3, 4]), .5);
     }
   }
 });
