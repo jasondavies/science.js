@@ -18,6 +18,7 @@ all: \
 
 science.core.js: \
 	src/core/core.js \
+	src/core/ascending.js \
 	src/core/constants.js \
 	src/core/expm1.js \
 	src/core/functor.js \

@@ -1,4 +1,7 @@
 (function(){science = {version: "1.6.0"}; // semver
+science.ascending = function(a, b) {
+  return a - b;
+};
 // Euler's constant.
 science.EULER = .5772156649015329;
 // Compute exp(x) - 1 accurately for small x.
