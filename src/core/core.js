@@ -1,1 +1,1 @@
-science = {version: "1.6.0"}; // semver
+science = {version: "1.7.0"}; // semver
