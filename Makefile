@@ -63,6 +63,8 @@ science.stats.js: \
 	src/stats/mode.js \
 	src/stats/quantiles.js \
 	src/stats/variance.js \
+	src/stats/distribution.js \
+	src/stats/distribution/gaussian.js \
 	src/end.js
 
 test: all
