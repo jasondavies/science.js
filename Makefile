@@ -28,6 +28,7 @@ science.core.js: \
 
 science.vector.js: \
 	src/vector/vector.js \
+	src/vector/decompose.js \
 	src/vector/cross.js \
 	src/vector/dot.js \
 	src/vector/length.js \
