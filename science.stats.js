@@ -724,10 +724,14 @@ science.stats.distribution = {
 science.stats.distribution.gaussian = function() {
   var random = Math.random,
       mean = 0,
-      sigma = 1;
+      sigma = 1,
+      variance = 1;
 
   function gaussian() {
-    var x1, x2, rad, y1;
+    var x1,
+        x2,
+        rad,
+        y1;
 
     do {
       x1 = 2 * random() - 1;
@@ -735,7 +739,7 @@ science.stats.distribution.gaussian = function() {
       rad = x1 * x1 + x2 * x2;
     } while (rad >= 1 || rad === 0);
 
-    return x1 * Math.sqrt(-2 * Math.log(rad) / rad);
+    return mean + sigma * x1 * Math.sqrt(-2 * Math.log(rad) / rad);
   }
 
   gaussian.pdf = function(x) {
@@ -754,9 +758,9 @@ science.stats.distribution.gaussian = function() {
     return gaussian;
   };
 
-  gaussian.sigma = function(x) {
-    if (!arguments.length) return sigma;
-    sigma = +x;
+  gaussian.variance = function(x) {
+    if (!arguments.length) return variance;
+    sigma = Math.sqrt(variance = +x);
     return gaussian;
   };
 
