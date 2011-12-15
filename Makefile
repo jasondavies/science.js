@@ -80,7 +80,6 @@ package.json: science.js src/package.js
 science.js science%.js: Makefile
 	@rm -f $@
 	cat $(filter %.js,$^) > $@
-	@chmod a-w $@
 
 %.test: %.js %.out all
 	@/bin/echo -n "test: $* "
