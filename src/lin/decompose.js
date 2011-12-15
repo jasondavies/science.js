@@ -1,8 +1,8 @@
 science.lin.decompose = function() {
 
   function decompose(A) {
-    var n = A.length; // column dimension
-    var V = [],
+    var n = A.length, // column dimension
+        V = [],
         d = [],
         e = [];
 
@@ -71,7 +71,7 @@ function science_lin_decomposeTred2(d, e, V) {
 
     var scale = 0,
         h = 0;
-    for (var k = 0; k < i; k++) { scale = scale + Math.abs(d[k]); }
+    for (var k = 0; k < i; k++) scale += Math.abs(d[k]);
     if (scale === 0) {
       e[i] = d[i-1];
       for (var j = 0; j < i; j++) {
@@ -111,11 +111,11 @@ function science_lin_decomposeTred2(d, e, V) {
         f += e[j] * d[j];
       }
       var hh = f / (h + h);
-      for (var j = 0; j < i; j++) { e[j] -= hh * d[j]; }
+      for (var j = 0; j < i; j++) e[j] -= hh * d[j];
       for (var j = 0; j < i; j++) {
         f = d[j];
         g = e[j];
-        for (var k = j; k <= i-1; k++) { V[k][j] -= (f * e[k] + g * d[k]); }
+        for (var k = j; k <= i-1; k++) V[k][j] -= (f * e[k] + g * d[k]);
         d[j] = V[i-1][j];
         V[i][j] = 0;
       }
@@ -129,14 +129,14 @@ function science_lin_decomposeTred2(d, e, V) {
     V[i][i] = 1.0;
     var h = d[i+1];
     if (h != 0) {
-      for (var k = 0; k <= i; k++) { d[k] = V[k][i+1] / h; }
+      for (var k = 0; k <= i; k++) d[k] = V[k][i+1] / h;
       for (var j = 0; j <= i; j++) {
         var g = 0;
-        for (var k = 0; k <= i; k++) { g += V[k][i+1] * V[k][j]; }
-        for (var k = 0; k <= i; k++) { V[k][j] -= g * d[k]; }
+        for (var k = 0; k <= i; k++) g += V[k][i+1] * V[k][j];
+        for (var k = 0; k <= i; k++) V[k][j] -= g * d[k];
       }
     }
-    for (var k = 0; k <= i; k++) { V[k][i+1] = 0; }
+    for (var k = 0; k <= i; k++) V[k][i+1] = 0;
   }
   for (var j = 0; j < n; j++) {
     d[j] = V[n - 1][j];
@@ -155,7 +155,7 @@ function science_lin_decomposeTql2(d, e, V) {
 
   var n = V.length;
 
-  for (var i = 1; i < n; i++) { e[i-1] = e[i]; }
+  for (var i = 1; i < n; i++) e[i-1] = e[i];
   e[n - 1] = 0;
 
   var f = 0;
@@ -181,21 +181,17 @@ function science_lin_decomposeTql2(d, e, V) {
         var g = d[l];
         var p = (d[l+1] - g) / (2.0 * e[l]);
         var r = science.hypot(p, 1);
-        if (p < 0) {
-            r = -r;
-        }
+        if (p < 0) r = -r;
         d[l] = e[l] / (p + r);
         d[l+1] = e[l] * (p + r);
         var dl1 = d[l+1];
         var h = g - d[l];
-        for (var i = l+2; i < n; i++) {
-            d[i] -= h;
-        }
-        f = f + h;
+        for (var i = l+2; i < n; i++) d[i] -= h;
+        f += h;
 
         // Implicit QL transformation.
         p = d[m];
-        var c = 1.0;
+        var c = 1;
         var c2 = c;
         var c3 = c;
         var el1 = e[l+1];
@@ -280,7 +276,7 @@ function science_lin_decomposeOrthes(H, V) {
         h += ort[i] * ort[i];
       }
       var g = Math.sqrt(h);
-      if (ort[m] > 0) { g = -g; }
+      if (ort[m] > 0) g = -g;
       h = h - ort[m] * g;
       ort[m] = ort[m] - g;
 
@@ -311,13 +307,13 @@ function science_lin_decomposeOrthes(H, V) {
 
   for (var m = high-1; m >= low+1; m--) {
     if (H[m][m - 1] !== 0) {
-      for (var i = m + 1; i <= high; i++) { ort[i] = H[i][m-1]; }
+      for (var i = m + 1; i <= high; i++) ort[i] = H[i][m-1];
       for (var j = m; j <= high; j++) {
         var g = 0;
-        for (var i = m; i <= high; i++) { g += ort[i] * V[i][j]; }
+        for (var i = m; i <= high; i++) g += ort[i] * V[i][j];
         // Double division avoids possible underflow
         g = (g / ort[m]) / H[m][m-1];
-        for (var i = m; i <= high; i++) { V[i][j] += g * ort[i]; }
+        for (var i = m; i <= high; i++) V[i][j] += g * ort[i];
       }
     }
   }
@@ -490,9 +486,7 @@ function science_lin_decomposeHqr2(d, e, H, V) {
         p = p / s;
         q = q / s;
         r = r / s;
-        if (m == l) {
-          break;
-        }
+        if (m == l) break;
         if (Math.abs(H[m][m-1]) * (Math.abs(q) + Math.abs(r)) <
           eps * (Math.abs(p) * (Math.abs(H[m-1][m-1]) + Math.abs(z) +
           Math.abs(H[m+1][m+1])))) {
@@ -503,7 +497,7 @@ function science_lin_decomposeHqr2(d, e, H, V) {
 
       for (var i = m+2; i <= n; i++) {
         H[i][i-2] = 0;
-        if (i > m+2) { H[i][i-3] = 0; }
+        if (i > m+2) H[i][i-3] = 0;
       }
 
       // Double QR step involving rows l:n and columns m:n
@@ -520,7 +514,7 @@ function science_lin_decomposeHqr2(d, e, H, V) {
             r /= x;
           }
         }
-        if (x == 0) { break; }
+        if (x == 0) break;
         s = Math.sqrt(p * p + q * q + r * r);
         if (p < 0) { s = -s; }
         if (s != 0) {
@@ -590,12 +584,8 @@ function science_lin_decomposeHqr2(d, e, H, V) {
           s = r;
         } else {
           l = i;
-          if (e[i] == 0) {
-              if (w != 0) {
-                  H[i][n] = -r / w;
-              } else {
-                  H[i][n] = -r / (eps * norm);
-              }
+          if (e[i] === 0) {
+            H[i][n] = -r / (w !== 0 ? w : eps * norm);
           } else {
             // Solve real equations
             x = H[i][i+1];
@@ -692,7 +682,7 @@ function science_lin_decomposeHqr2(d, e, H, V) {
   // Vectors of isolated roots
   for (var i = 0; i < nn; i++) {
     if (i < low || i > high) {
-      for (var j = i; j < nn; j++) { V[i][j] = H[i][j]; }
+      for (var j = i; j < nn; j++) V[i][j] = H[i][j];
     }
   }
 
@@ -700,7 +690,7 @@ function science_lin_decomposeHqr2(d, e, H, V) {
   for (var j = nn - 1; j >= low; j--) {
     for (var i = low; i <= high; i++) {
       z = 0;
-      for (var k = low; k <= Math.min(j,high); k++) z += V[i][k] * H[k][j];
+      for (var k = low; k <= Math.min(j, high); k++) z += V[i][k] * H[k][j];
       V[i][j] = z;
     }
   }
@@ -708,14 +698,13 @@ function science_lin_decomposeHqr2(d, e, H, V) {
 
 // Complex scalar division.
 function science_lin_decomposeCdiv(xr, xi, yr, yi) {
-  var r, d;
   if (Math.abs(yr) > Math.abs(yi)) {
-    r = yi / yr;
-    d = yr + r * yi;
+    var r = yi / yr,
+        d = yr + r * yi;
     return [(xr + r * xi) / d, (xi - r * xr) / d];
   } else {
-    r = yr / yi;
-    d = yi + r * yr;
+    var r = yr / yi,
+        d = yi + r * yr;
     return [(r * xr + xi) / d, (r * xi - xr) / d];
   }
 }
