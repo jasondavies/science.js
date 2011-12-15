@@ -1,4 +1,4 @@
-(function(){science = {version: "1.7.1"}; // semver
+(function(){science = {version: "1.8.0"}; // semver
 science.ascending = function(a, b) {
   return a - b;
 };
