@@ -1,4 +1,4 @@
-science.vector.transpose = function(a) {
+science.lin.transpose = function(a) {
   var m = a.length,
       n = a[0].length,
       i = -1,

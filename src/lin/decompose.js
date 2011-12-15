@@ -1,4 +1,4 @@
-science.vector.decompose = function() {
+science.lin.decompose = function() {
 
   function decompose(A) {
     var n = A.length; // column dimension
@@ -26,19 +26,19 @@ science.vector.decompose = function() {
       for (var i = 0; i < n; i++) V[i] = A[i].slice();
 
       // Tridiagonalize.
-      science_vector_decomposeTred2(d, e, V);
+      science_lin_decomposeTred2(d, e, V);
 
       // Diagonalize.
-      science_vector_decomposeTql2(d, e, V);
+      science_lin_decomposeTql2(d, e, V);
     } else {
       var H = [];
       for (var i = 0; i < n; i++) H[i] = A[i].slice();
 
       // Reduce to Hessenberg form.
-      science_vector_decomposeOrthes(H, V);
+      science_lin_decomposeOrthes(H, V);
 
       // Reduce Hessenberg to real Schur form.
-      science_vector_decomposeHqr2(d, e, H, V);
+      science_lin_decomposeHqr2(d, e, H, V);
     }
 
     var D = [];
@@ -55,7 +55,7 @@ science.vector.decompose = function() {
 };
 
 // Symmetric Householder reduction to tridiagonal form.
-function science_vector_decomposeTred2(d, e, V) {
+function science_lin_decomposeTred2(d, e, V) {
   // This is derived from the Algol procedures tred2 by
   // Bowdler, Martin, Reinsch, and Wilkinson, Handbook for
   // Auto. Comp., Vol.ii-Linear Algebra, and the corresponding
@@ -147,7 +147,7 @@ function science_vector_decomposeTred2(d, e, V) {
 }
 
 // Symmetric tridiagonal QL algorithm.
-function science_vector_decomposeTql2(d, e, V) {
+function science_lin_decomposeTql2(d, e, V) {
   // This is derived from the Algol procedures tql2, by
   // Bowdler, Martin, Reinsch, and Wilkinson, Handbook for
   // Auto. Comp., Vol.ii-Linear Algebra, and the corresponding
@@ -255,7 +255,7 @@ function science_vector_decomposeTql2(d, e, V) {
 }
 
 // Nonsymmetric reduction to Hessenberg form.
-function science_vector_decomposeOrthes(H, V) {
+function science_lin_decomposeOrthes(H, V) {
   // This is derived from the Algol procedures orthes and ortran,
   // by Martin and Wilkinson, Handbook for Auto. Comp.,
   // Vol.ii-Linear Algebra, and the corresponding
@@ -324,7 +324,7 @@ function science_vector_decomposeOrthes(H, V) {
 }
 
 // Nonsymmetric reduction from Hessenberg to real Schur form.
-function science_vector_decomposeHqr2(d, e, H, V) {
+function science_lin_decomposeHqr2(d, e, H, V) {
   // This is derived from the Algol procedure hqr2,
   // by Martin and Wilkinson, Handbook for Auto. Comp.,
   // Vol.ii-Linear Algebra, and the corresponding
@@ -626,7 +626,7 @@ function science_vector_decomposeHqr2(d, e, H, V) {
         H[n - 1][n - 1] = q / H[n][n - 1];
         H[n - 1][n] = -(H[n][n] - p) / H[n][n - 1];
       } else {
-        var zz = science_vector_decomposeCdiv(0, -H[n - 1][n], H[n - 1][n - 1] - p, q);
+        var zz = science_lin_decomposeCdiv(0, -H[n - 1][n], H[n - 1][n - 1] - p, q);
         H[n - 1][n - 1] = zz[0];
         H[n - 1][n] = zz[1];
       }
@@ -650,7 +650,7 @@ function science_vector_decomposeHqr2(d, e, H, V) {
         } else {
           l = i;
           if (e[i] == 0) {
-            var zz = science_vector_decomposeCdiv(-ra,-sa,w,q);
+            var zz = science_lin_decomposeCdiv(-ra,-sa,w,q);
             H[i][n - 1] = zz[0];
             H[i][n] = zz[1];
           } else {
@@ -663,14 +663,14 @@ function science_vector_decomposeHqr2(d, e, H, V) {
               vr = eps * norm * (Math.abs(w) + Math.abs(q) +
                 Math.abs(x) + Math.abs(y) + Math.abs(z));
             }
-            var zz = science_vector_decomposeCdiv(x*r-z*ra+q*sa,x*s-z*sa-q*ra,vr,vi);
+            var zz = science_lin_decomposeCdiv(x*r-z*ra+q*sa,x*s-z*sa-q*ra,vr,vi);
             H[i][n - 1] = zz[0];
             H[i][n] = zz[1];
             if (Math.abs(x) > (Math.abs(z) + Math.abs(q))) {
               H[i+1][n - 1] = (-ra - w * H[i][n - 1] + q * H[i][n]) / x;
               H[i+1][n] = (-sa - w * H[i][n] - q * H[i][n - 1]) / x;
             } else {
-              var zz = science_vector_decomposeCdiv(-r-y*H[i][n - 1],-s-y*H[i][n],z,q);
+              var zz = science_lin_decomposeCdiv(-r-y*H[i][n - 1],-s-y*H[i][n],z,q);
               H[i+1][n - 1] = zz[0];
               H[i+1][n] = zz[1];
             }
@@ -707,7 +707,7 @@ function science_vector_decomposeHqr2(d, e, H, V) {
 }
 
 // Complex scalar division.
-function science_vector_decomposeCdiv(xr, xi, yr, yi) {
+function science_lin_decomposeCdiv(xr, xi, yr, yi) {
   var r, d;
   if (Math.abs(yr) > Math.abs(yi)) {
     r = yi / yr;

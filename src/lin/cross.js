@@ -1,4 +1,4 @@
-science.vector.cross = function(a, b) {
+science.lin.cross = function(a, b) {
   // TODO how to handle non-3D vectors?
   // TODO handle 7D vectors?
   return [

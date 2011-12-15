@@ -13,7 +13,6 @@ all: \
 .INTERMEDIATE science.js: \
 	src/start.js \
 	science.core.js \
-	science.vector.js \
 	src/end.js
 
 science.core.js: \
@@ -26,22 +25,19 @@ science.core.js: \
 	src/core/quadratic.js \
 	src/core/zeroes.js
 
-science.vector.js: \
-	src/vector/vector.js \
-	src/vector/decompose.js \
-	src/vector/cross.js \
-	src/vector/dot.js \
-	src/vector/length.js \
-	src/vector/normalize.js \
-	src/vector/determinant.js \
-	src/vector/gaussjordan.js \
-	src/vector/inverse.js \
-	src/vector/multiply.js \
-	src/vector/transpose.js
-
 science.lin.js: \
 	src/start.js \
 	src/lin/lin.js \
+	src/lin/decompose.js \
+	src/lin/cross.js \
+	src/lin/dot.js \
+	src/lin/length.js \
+	src/lin/normalize.js \
+	src/lin/determinant.js \
+	src/lin/gaussjordan.js \
+	src/lin/inverse.js \
+	src/lin/multiply.js \
+	src/lin/transpose.js \
 	src/lin/tridag.js \
 	src/end.js
 

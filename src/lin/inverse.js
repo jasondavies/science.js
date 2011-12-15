@@ -1,5 +1,5 @@
 // Find matrix inverse using Gauss-Jordan.
-science.vector.inverse = function(m) {
+science.lin.inverse = function(m) {
   var n = m.length
       i = -1;
 
@@ -15,7 +15,7 @@ science.vector.inverse = function(m) {
   });
 
   // Compute IA^-1.
-  science.vector.gaussjordan(m);
+  science.lin.gaussjordan(m);
 
   // Remove identity matrix I to get A^-1.
   while (++i < n) {

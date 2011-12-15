@@ -28,7 +28,7 @@ suite.addBatch({
         if (i > 0) matrix[i - 1][i] = a[i];
         if (i < n - 1) matrix[i + 1][i] = c[i];
       }
-      var result = science.vector.multiply(matrix, x.map(function(d) { return [d]; }));
+      var result = science.lin.multiply(matrix, x.map(function(d) { return [d]; }));
       var epsilon = 1e-12;
       for (var i=0; i<n; i++) {
         assert.isTrue(result[i] - d[i] < epsilon);

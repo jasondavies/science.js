@@ -1,4 +1,4 @@
-science.vector.dot = function(a, b) {
+science.lin.dot = function(a, b) {
   var s = 0,
       i = -1,
       n = Math.min(a.length, b.length);
