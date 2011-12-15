@@ -32,7 +32,7 @@ science.vector.decompose = function() {
       science_vector_decomposeTql2(d, e, V);
     } else {
       var H = [];
-      for (var j = 0; j < n; j++) H[i] = A.slice();
+      for (var i = 0; i < n; i++) H[i] = A[i].slice();
 
       // Reduce to Hessenberg form.
       science_vector_decomposeOrthes(H, V);
@@ -43,54 +43,13 @@ science.vector.decompose = function() {
 
     var D = [];
     for (var i=0; i<n; i++) {
-      D[i] = [];
-      for (var j=0; j<n; j++) D[i][j] = 0;
-      D[i][i] = d[i];
+      var row = D[i] = [];
+      for (var j=0; j<n; j++) row[j] = i === j ? d[i] : 0;
       if (e[i] > 0) D[i][i+1] = e[i];
       else if (e[i] < 0) D[i][i-1] = e[i];
     }
     return {D: D, V: V};
   }
-
-//
-//   /** Return the real parts of the eigenvalues
-//   @return     real(diag(D))
-//   */
-//
-//   public double[] getRealEigenvalues () {
-//      return d;
-//   }
-//
-//   /** Return the imaginary parts of the eigenvalues
-//   @return     imag(diag(D))
-//   */
-//
-//   public double[] getImagEigenvalues () {
-//      return e;
-//   }
-
-    /** Return the block diagonal eigenvalue matrix
-    @return     D
-    */
-
-  /*
-    this.getD = function() {
-        var X = new Matrix(this.n,this.n);
-        var D = X.getArray();
-        for (var i = 0; i < this.n; i++) {
-            for (var j = 0; j < this.n; j++) {
-                D[i][j] = 0;
-            }
-            D[i][i] = this.d[i];
-            if (this.e[i] > 0) {
-                D[i][i+1] = this.e[i];
-            } else if (this.e[i] < 0) {
-                D[i][i-1] = this.e[i];
-            }
-        }
-        return X;
-    }
-    */
 
   return decompose;
 };
@@ -104,10 +63,10 @@ function science_vector_decomposeTred2(d, e, V) {
 
   var n = V.length;
 
-  for (var j = 0; j < n; j++) { d[j] = V[n-1][j]; }
+  for (var j = 0; j < n; j++) d[j] = V[n - 1][j];
 
   // Householder reduction to tridiagonal form.
-  for (var i = n-1; i > 0; i--) {
+  for (var i = n - 1; i > 0; i--) {
     // Scale to avoid under/overflow.
 
     var scale = 0,
@@ -165,8 +124,8 @@ function science_vector_decomposeTred2(d, e, V) {
   }
 
   // Accumulate transformations.
-  for (var i = 0; i < n-1; i++) {
-    V[n-1][i] = V[i][i];
+  for (var i = 0; i < n - 1; i++) {
+    V[n - 1][i] = V[i][i];
     V[i][i] = 1.0;
     var h = d[i+1];
     if (h != 0) {
@@ -180,10 +139,10 @@ function science_vector_decomposeTred2(d, e, V) {
     for (var k = 0; k <= i; k++) { V[k][i+1] = 0; }
   }
   for (var j = 0; j < n; j++) {
-    d[j] = V[n-1][j];
-    V[n-1][j] = 0;
+    d[j] = V[n - 1][j];
+    V[n - 1][j] = 0;
   }
-  V[n-1][n-1] = 1;
+  V[n - 1][n - 1] = 1;
   e[0] = 0;
 }
 
@@ -197,7 +156,7 @@ function science_vector_decomposeTql2(d, e, V) {
   var n = V.length;
 
   for (var i = 1; i < n; i++) { e[i-1] = e[i]; }
-  e[n-1] = 0;
+  e[n - 1] = 0;
 
   var f = 0;
   var tst1 = 0;
@@ -274,7 +233,7 @@ function science_vector_decomposeTql2(d, e, V) {
   }
 
   // Sort eigenvalues and corresponding vectors.
-  for (var i = 0; i < n-1; i++) {
+  for (var i = 0; i < n - 1; i++) {
     var k = i;
     var p = d[i];
     for (var j = i+1; j < n; j++) {
@@ -306,53 +265,53 @@ function science_vector_decomposeOrthes(H, V) {
   var ort = [];
 
   var low = 0;
-  var high = n-1;
+  var high = n - 1;
 
-  for (var m = low+1; m <= high-1; m++) {
+  for (var m = low + 1; m < high; m++) {
     // Scale column.
     var scale = 0;
-    for (var i = m; i <= high; i++) { scale = scale + Math.abs(H[i][m-1]); }
+    for (var i = m; i <= high; i++) scale += Math.abs(H[i][m - 1]);
+
     if (scale !== 0) {
+      // Compute Householder transformation.
+      var h = 0;
+      for (var i = high; i >= m; i--) {
+        ort[i] = H[i][m - 1] / scale;
+        h += ort[i] * ort[i];
+      }
+      var g = Math.sqrt(h);
+      if (ort[m] > 0) { g = -g; }
+      h = h - ort[m] * g;
+      ort[m] = ort[m] - g;
 
-        // Compute Householder transformation.
-        var h = 0;
-        for (var i = high; i >= m; i--) {
-          ort[i] = H[i][m-1]/scale;
-          h += ort[i] * ort[i];
-        }
-        var g = Math.sqrt(h);
-        if (ort[m] > 0) { g = -g; }
-        h = h - ort[m] * g;
-        ort[m] = ort[m] - g;
+      // Apply Householder similarity transformation
+      // H = (I-u*u'/h)*H*(I-u*u')/h)
+      for (var j = m; j < n; j++) {
+        var f = 0;
+        for (var i = high; i >= m; i--) f += ort[i] * H[i][j];
+        f /= h;
+        for (var i = m; i <= high; i++) H[i][j] -= f * ort[i];
+      }
 
-        // Apply Householder similarity transformation
-        // H = (I-u*u'/h)*H*(I-u*u')/h)
-        for (var j = m; j < n; j++) {
-          var f = 0;
-          for (var i = high; i >= m; i--) { f += ort[i]*H[i][j]; }
-          f /= h;
-          for (var i = m; i <= high; i++) { H[i][j] -= f*ort[i]; }
-        }
-
-        for (var i = 0; i <= high; i++) {
-          var f = 0;
-          for (var j = high; j >= m; j--) { f += ort[j]*H[i][j]; }
-          f /= h;
-          for (var j = m; j <= high; j++) { H[i][j] -= f*ort[j]; }
-        }
-        ort[m] = scale*ort[m];
-        H[m][m-1] = scale*g;
+      for (var i = 0; i <= high; i++) {
+        var f = 0;
+        for (var j = high; j >= m; j--) f += ort[j] * H[i][j];
+        f /= h;
+        for (var j = m; j <= high; j++) H[i][j] -= f * ort[j];
+      }
+      ort[m] = scale * ort[m];
+      H[m][m - 1] = scale * g;
     }
   }
 
   // Accumulate transformations (Algol's ortran).
   for (var i = 0; i < n; i++) {
-    for (var j = 0; j < n; j++) { V[i][j] = (i == j ? 1.0 : 0); }
+    for (var j = 0; j < n; j++) V[i][j] = i === j ? 1 : 0;
   }
 
   for (var m = high-1; m >= low+1; m--) {
-    if (H[m][m-1] != 0) {
-      for (var i = m+1; i <= high; i++) { ort[i] = H[i][m-1]; }
+    if (H[m][m - 1] !== 0) {
+      for (var i = m + 1; i <= high; i++) { ort[i] = H[i][m-1]; }
       for (var j = m; j <= high; j++) {
         var g = 0;
         for (var i = m; i <= high; i++) { g += ort[i] * V[i][j]; }
@@ -371,115 +330,111 @@ function science_vector_decomposeHqr2(d, e, H, V) {
   // Vol.ii-Linear Algebra, and the corresponding
   // Fortran subroutine in EISPACK.
 
-  // Initialize
-  var nn = H.length;
-  var n = nn-1;
-  var low = 0;
-  var high = nn-1;
-  var eps = 1e-12;
-  var exshift = 0;
-  var p=0,q=0,r=0,s=0,z=0,t,w,x,y;
+  var nn = H.length,
+      n = nn - 1,
+      low = 0,
+      high = nn - 1,
+      eps = 1e-12,
+      exshift = 0,
+      p = 0,
+      q = 0,
+      r = 0,
+      s = 0,
+      z = 0,
+      t,
+      w,
+      x,
+      y;
 
   // Store roots isolated by balanc and compute matrix norm
   var norm = 0;
   for (var i = 0; i < nn; i++) {
-    if (i < low | i > high) {
+    if (i < low || i > high) {
       d[i] = H[i][i];
       e[i] = 0;
     }
-    for (var j = Math.max(i-1,0); j < nn; j++) { norm = norm + Math.abs(H[i][j]); }
+    for (var j = Math.max(i - 1, 0); j < nn; j++) norm += Math.abs(H[i][j]);
   }
 
   // Outer loop over eigenvalue index
-
   var iter = 0;
   while (n >= low) {
     // Look for single small sub-diagonal element
     var l = n;
     while (l > low) {
-      s = Math.abs(H[l-1][l-1]) + Math.abs(H[l][l]);
-      if (s == 0) {
-          s = norm;
-      }
-      if (Math.abs(H[l][l-1]) < eps * s) {
-          break;
-      }
+      s = Math.abs(H[l - 1][l - 1]) + Math.abs(H[l][l]);
+      if (s === 0) s = norm;
+      if (Math.abs(H[l][l - 1]) < eps * s) break;
       l--;
     }
 
     // Check for convergence
     // One root found
-    if (l == n) {
-        H[n][n] = H[n][n] + exshift;
-        d[n] = H[n][n];
-        e[n] = 0;
-        n--;
-        iter = 0;
+    if (l === n) {
+      H[n][n] = H[n][n] + exshift;
+      d[n] = H[n][n];
+      e[n] = 0;
+      n--;
+      iter = 0;
 
     // Two roots found
-    } else if (l == n-1) {
-        w = H[n][n-1] * H[n-1][n];
-        p = (H[n-1][n-1] - H[n][n]) / 2.0;
-        q = p * p + w;
-        z = Math.sqrt(Math.abs(q));
-        H[n][n] = H[n][n] + exshift;
-        H[n-1][n-1] = H[n-1][n-1] + exshift;
-        x = H[n][n];
+    } else if (l === n - 1) {
+      w = H[n][n - 1] * H[n - 1][n];
+      p = (H[n - 1][n - 1] - H[n][n]) / 2;
+      q = p * p + w;
+      z = Math.sqrt(Math.abs(q));
+      H[n][n] = H[n][n] + exshift;
+      H[n - 1][n - 1] = H[n - 1][n - 1] + exshift;
+      x = H[n][n];
 
-        // Real pair
-        if (q >= 0) {
-            if (p >= 0) {
-                z = p + z;
-            } else {
-                z = p - z;
-            }
-            d[n-1] = x + z;
-            d[n] = d[n-1];
-            if (z != 0) {
-                d[n] = x - w / z;
-            }
-            e[n-1] = 0;
-            e[n] = 0;
-            x = H[n][n-1];
-            s = Math.abs(x) + Math.abs(z);
-            p = x / s;
-            q = z / s;
-            r = Math.sqrt(p * p+q * q);
-            p = p / r;
-            q = q / r;
+      // Real pair
+      if (q >= 0) {
+        z = p + (p >= 0 ? z : -z);
+        d[n - 1] = x + z;
+        d[n] = d[n - 1];
+        if (z !== 0) d[n] = x - w / z;
+        e[n - 1] = 0;
+        e[n] = 0;
+        x = H[n][n - 1];
+        s = Math.abs(x) + Math.abs(z);
+        p = x / s;
+        q = z / s;
+        r = Math.sqrt(p * p+q * q);
+        p /= r;
+        q /= r;
 
-            // Row modification
-            for (var j = n-1; j < nn; j++) {
-                z = H[n-1][j];
-                H[n-1][j] = q * z + p * H[n][j];
-                H[n][j] = q * H[n][j] - p * z;
-            }
+        // Row modification
+        for (var j = n - 1; j < nn; j++) {
+          z = H[n - 1][j];
+          H[n - 1][j] = q * z + p * H[n][j];
+          H[n][j] = q * H[n][j] - p * z;
+        }
 
-            // Column modification
-            for (var i = 0; i <= n; i++) {
-                z = H[i][n-1];
-                H[i][n-1] = q * z + p * H[i][n];
-                H[i][n] = q * H[i][n] - p * z;
-            }
+        // Column modification
+        for (var i = 0; i <= n; i++) {
+          z = H[i][n - 1];
+          H[i][n - 1] = q * z + p * H[i][n];
+          H[i][n] = q * H[i][n] - p * z;
+        }
 
-            // Accumulate transformations
-            for (var i = low; i <= high; i++) {
-                z = V[i][n-1];
-                V[i][n-1] = q * z + p * V[i][n];
-                V[i][n] = q * V[i][n] - p * z;
-            }
+        // Accumulate transformations
+        for (var i = low; i <= high; i++) {
+          z = V[i][n - 1];
+          V[i][n - 1] = q * z + p * V[i][n];
+          V[i][n] = q * V[i][n] - p * z;
+        }
 
         // Complex pair
-        } else {
-            d[n-1] = x + p;
-            d[n] = x + p;
-            e[n-1] = z;
-            e[n] = -z;
-        }
-        n = n - 2;
-        iter = 0;
+      } else {
+        d[n - 1] = x + p;
+        d[n] = x + p;
+        e[n - 1] = z;
+        e[n] = -z;
+      }
+      n = n - 2;
+      iter = 0;
 
-    // No convergence yet
+      // No convergence yet
     } else {
 
       // Form shift
@@ -487,8 +442,8 @@ function science_vector_decomposeHqr2(d, e, H, V) {
       y = 0;
       w = 0;
       if (l < n) {
-        y = H[n-1][n-1];
-        w = H[n][n-1] * H[n-1][n];
+        y = H[n - 1][n - 1];
+        w = H[n][n - 1] * H[n - 1][n];
       }
 
       // Wilkinson's original ad hoc shift
@@ -497,7 +452,7 @@ function science_vector_decomposeHqr2(d, e, H, V) {
         for (var i = low; i <= n; i++) {
           H[i][i] -= x;
         }
-        s = Math.abs(H[n][n-1]) + Math.abs(H[n-1][n-2]);
+        s = Math.abs(H[n][n - 1]) + Math.abs(H[n - 1][n-2]);
         x = y = 0.75 * s;
         w = -0.4375 * s * s;
       }
@@ -552,8 +507,8 @@ function science_vector_decomposeHqr2(d, e, H, V) {
       }
 
       // Double QR step involving rows l:n and columns m:n
-      for (var k = m; k <= n-1; k++) {
-        var notlast = (k != n-1);
+      for (var k = m; k <= n - 1; k++) {
+        var notlast = (k != n - 1);
         if (k != m) {
           p = H[k][k-1];
           q = H[k+1][k-1];
@@ -618,7 +573,7 @@ function science_vector_decomposeHqr2(d, e, H, V) {
   // Backsubstitute to find vectors of upper triangular form
   if (norm == 0) { return; }
 
-  for (n = nn-1; n >= 0; n--) {
+  for (n = nn - 1; n >= 0; n--) {
     p = d[n];
     q = e[n];
 
@@ -626,7 +581,7 @@ function science_vector_decomposeHqr2(d, e, H, V) {
     if (q == 0) {
       var l = n;
       H[n][n] = 1.0;
-      for (var i = n-1; i >= 0; i--) {
+      for (var i = n - 1; i >= 0; i--) {
         w = H[i][i] - p;
         r = 0;
         for (var j = l; j <= n; j++) { r = r + H[i][j] * H[j][n]; }
@@ -658,33 +613,32 @@ function science_vector_decomposeHqr2(d, e, H, V) {
           // Overflow control
           t = Math.abs(H[i][n]);
           if ((eps * t) * t > 1) {
-            for (var j = i; j <= n; j++) {
-              H[j][n] = H[j][n] / t;
-            }
+            for (var j = i; j <= n; j++) H[j][n] = H[j][n] / t;
           }
         }
       }
     // Complex vector
     } else if (q < 0) {
-      var l = n-1;
+      var l = n - 1;
 
       // Last vector component imaginary so matrix is triangular
-      if (Math.abs(H[n][n-1]) > Math.abs(H[n-1][n])) {
-        H[n-1][n-1] = q / H[n][n-1];
-        H[n-1][n] = -(H[n][n] - p) / H[n][n-1];
+      if (Math.abs(H[n][n - 1]) > Math.abs(H[n - 1][n])) {
+        H[n - 1][n - 1] = q / H[n][n - 1];
+        H[n - 1][n] = -(H[n][n] - p) / H[n][n - 1];
       } else {
-        var zz = science_vector_decomposeCdiv(0,-H[n-1][n],H[n-1][n-1]-p,q);
-        H[n-1][n-1] = zz[0];
-        H[n-1][n] = zz[1];
+        var zz = science_vector_decomposeCdiv(0, -H[n - 1][n], H[n - 1][n - 1] - p, q);
+        H[n - 1][n - 1] = zz[0];
+        H[n - 1][n] = zz[1];
       }
-      H[n][n-1] = 0;
-      H[n][n] = 1.0;
+      H[n][n - 1] = 0;
+      H[n][n] = 1;
       for (var i = n-2; i >= 0; i--) {
-        var ra,sa,vr,vi;
-        ra = 0;
-        sa = 0;
+        var ra = 0,
+            sa = 0,
+            vr,
+            vi;
         for (var j = l; j <= n; j++) {
-          ra = ra + H[i][j] * H[j][n-1];
+          ra = ra + H[i][j] * H[j][n - 1];
           sa = sa + H[i][j] * H[j][n];
         }
         w = H[i][i] - p;
@@ -697,7 +651,7 @@ function science_vector_decomposeHqr2(d, e, H, V) {
           l = i;
           if (e[i] == 0) {
             var zz = science_vector_decomposeCdiv(-ra,-sa,w,q);
-            H[i][n-1] = zz[0];
+            H[i][n - 1] = zz[0];
             H[i][n] = zz[1];
           } else {
             // Solve complex equations
@@ -710,23 +664,23 @@ function science_vector_decomposeHqr2(d, e, H, V) {
                 Math.abs(x) + Math.abs(y) + Math.abs(z));
             }
             var zz = science_vector_decomposeCdiv(x*r-z*ra+q*sa,x*s-z*sa-q*ra,vr,vi);
-            H[i][n-1] = zz[0];
+            H[i][n - 1] = zz[0];
             H[i][n] = zz[1];
             if (Math.abs(x) > (Math.abs(z) + Math.abs(q))) {
-              H[i+1][n-1] = (-ra - w * H[i][n-1] + q * H[i][n]) / x;
-              H[i+1][n] = (-sa - w * H[i][n] - q * H[i][n-1]) / x;
+              H[i+1][n - 1] = (-ra - w * H[i][n - 1] + q * H[i][n]) / x;
+              H[i+1][n] = (-sa - w * H[i][n] - q * H[i][n - 1]) / x;
             } else {
-              var zz = science_vector_decomposeCdiv(-r-y*H[i][n-1],-s-y*H[i][n],z,q);
-              H[i+1][n-1] = zz[0];
+              var zz = science_vector_decomposeCdiv(-r-y*H[i][n - 1],-s-y*H[i][n],z,q);
+              H[i+1][n - 1] = zz[0];
               H[i+1][n] = zz[1];
             }
           }
 
           // Overflow control
-          t = Math.max(Math.abs(H[i][n-1]),Math.abs(H[i][n]));
+          t = Math.max(Math.abs(H[i][n - 1]),Math.abs(H[i][n]));
           if ((eps * t) * t > 1) {
             for (var j = i; j <= n; j++) {
-              H[j][n-1] = H[j][n-1] / t;
+              H[j][n - 1] = H[j][n - 1] / t;
               H[j][n] = H[j][n] / t;
             }
           }
@@ -737,16 +691,16 @@ function science_vector_decomposeHqr2(d, e, H, V) {
 
   // Vectors of isolated roots
   for (var i = 0; i < nn; i++) {
-    if (i < low | i > high) {
+    if (i < low || i > high) {
       for (var j = i; j < nn; j++) { V[i][j] = H[i][j]; }
     }
   }
 
   // Back transformation to get eigenvectors of original matrix
-  for (var j = nn-1; j >= low; j--) {
+  for (var j = nn - 1; j >= low; j--) {
     for (var i = low; i <= high; i++) {
       z = 0;
-      for (var k = low; k <= Math.min(j,high); k++) { z = z + V[i][k] * H[k][j]; }
+      for (var k = low; k <= Math.min(j,high); k++) z += V[i][k] * H[k][j];
       V[i][j] = z;
     }
   }
