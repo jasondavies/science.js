@@ -43,11 +43,10 @@ science.lin.decompose = function() {
     }
 
     var D = [];
-    for (var i=0; i<n; i++) {
+    for (var i = 0; i < n; i++) {
       var row = D[i] = [];
-      for (var j=0; j<n; j++) row[j] = i === j ? d[i] : 0;
-      if (e[i] > 0) D[i][i+1] = e[i];
-      else if (e[i] < 0) D[i][i-1] = e[i];
+      for (var j = 0; j < n; j++) row[j] = i === j ? d[i] : 0;
+      D[i][e[i] > 0 ? i + 1 : i - 1] = e[i];
     }
     return {D: D, V: V};
   }
@@ -74,9 +73,9 @@ function science_lin_decomposeTred2(d, e, V) {
         h = 0;
     for (var k = 0; k < i; k++) scale += Math.abs(d[k]);
     if (scale === 0) {
-      e[i] = d[i-1];
+      e[i] = d[i - 1];
       for (var j = 0; j < i; j++) {
-        d[j] = V[i-1][j];
+        d[j] = V[i - 1][j];
         V[i][j] = 0;
         V[j][i] = 0;
       }
@@ -86,12 +85,12 @@ function science_lin_decomposeTred2(d, e, V) {
         d[k] /= scale;
         h += d[k] * d[k];
       }
-      var f = d[i-1];
+      var f = d[i - 1];
       var g = Math.sqrt(h);
       if (f > 0) g = -g;
       e[i] = scale * g;
       h = h - f * g;
-      d[i-1] = f - g;
+      d[i - 1] = f - g;
       for (var j = 0; j < i; j++) e[j] = 0;
 
       // Apply similarity transformation to remaining columns.
@@ -100,7 +99,7 @@ function science_lin_decomposeTred2(d, e, V) {
         f = d[j];
         V[j][i] = f;
         g = e[j] + V[j][j] * f;
-        for (var k = j+1; k <= i-1; k++) {
+        for (var k = j+1; k <= i - 1; k++) {
           g += V[k][j] * d[k];
           e[k] += V[k][j] * f;
         }
@@ -116,8 +115,8 @@ function science_lin_decomposeTred2(d, e, V) {
       for (var j = 0; j < i; j++) {
         f = d[j];
         g = e[j];
-        for (var k = j; k <= i-1; k++) V[k][j] -= (f * e[k] + g * d[k]);
-        d[j] = V[i-1][j];
+        for (var k = j; k <= i - 1; k++) V[k][j] -= (f * e[k] + g * d[k]);
+        d[j] = V[i - 1][j];
         V[i][j] = 0;
       }
     }
@@ -128,16 +127,16 @@ function science_lin_decomposeTred2(d, e, V) {
   for (var i = 0; i < n - 1; i++) {
     V[n - 1][i] = V[i][i];
     V[i][i] = 1.0;
-    var h = d[i+1];
+    var h = d[i + 1];
     if (h != 0) {
-      for (var k = 0; k <= i; k++) d[k] = V[k][i+1] / h;
+      for (var k = 0; k <= i; k++) d[k] = V[k][i + 1] / h;
       for (var j = 0; j <= i; j++) {
         var g = 0;
-        for (var k = 0; k <= i; k++) g += V[k][i+1] * V[k][j];
+        for (var k = 0; k <= i; k++) g += V[k][i + 1] * V[k][j];
         for (var k = 0; k <= i; k++) V[k][j] -= g * d[k];
       }
     }
-    for (var k = 0; k <= i; k++) V[k][i+1] = 0;
+    for (var k = 0; k <= i; k++) V[k][i + 1] = 0;
   }
   for (var j = 0; j < n; j++) {
     d[j] = V[n - 1][j];
@@ -156,7 +155,7 @@ function science_lin_decomposeTql2(d, e, V) {
 
   var n = V.length;
 
-  for (var i = 1; i < n; i++) e[i-1] = e[i];
+  for (var i = 1; i < n; i++) e[i - 1] = e[i];
   e[n - 1] = 0;
 
   var f = 0;
@@ -180,12 +179,12 @@ function science_lin_decomposeTql2(d, e, V) {
 
         // Compute implicit shift
         var g = d[l];
-        var p = (d[l+1] - g) / (2.0 * e[l]);
+        var p = (d[l + 1] - g) / (2 * e[l]);
         var r = science.hypot(p, 1);
         if (p < 0) r = -r;
         d[l] = e[l] / (p + r);
-        d[l+1] = e[l] * (p + r);
-        var dl1 = d[l+1];
+        d[l + 1] = e[l] * (p + r);
+        var dl1 = d[l + 1];
         var h = g - d[l];
         for (var i = l+2; i < n; i++) d[i] -= h;
         f += h;
@@ -195,26 +194,26 @@ function science_lin_decomposeTql2(d, e, V) {
         var c = 1;
         var c2 = c;
         var c3 = c;
-        var el1 = e[l+1];
+        var el1 = e[l + 1];
         var s = 0;
         var s2 = 0;
-        for (var i = m-1; i >= l; i--) {
+        for (var i = m - 1; i >= l; i--) {
           c3 = c2;
           c2 = c;
           s2 = s;
           g = c * e[i];
           h = c * p;
           r = science.hypot(p,e[i]);
-          e[i+1] = s * r;
+          e[i + 1] = s * r;
           s = e[i] / r;
           c = p / r;
           p = c * d[i] - s * g;
-          d[i+1] = h + s * (c * g + s * d[i]);
+          d[i + 1] = h + s * (c * g + s * d[i]);
 
           // Accumulate transformation.
           for (var k = 0; k < n; k++) {
-            h = V[k][i+1];
-            V[k][i+1] = s * V[k][i] + c * h;
+            h = V[k][i + 1];
+            V[k][i + 1] = s * V[k][i] + c * h;
             V[k][i] = c * V[k][i] - s * h;
           }
         }
@@ -233,7 +232,7 @@ function science_lin_decomposeTql2(d, e, V) {
   for (var i = 0; i < n - 1; i++) {
     var k = i;
     var p = d[i];
-    for (var j = i+1; j < n; j++) {
+    for (var j = i + 1; j < n; j++) {
       if (d[j] < p) {
         k = j;
         p = d[j];
@@ -308,12 +307,12 @@ function science_lin_decomposeOrthes(H, V) {
 
   for (var m = high-1; m >= low+1; m--) {
     if (H[m][m - 1] !== 0) {
-      for (var i = m + 1; i <= high; i++) ort[i] = H[i][m-1];
+      for (var i = m + 1; i <= high; i++) ort[i] = H[i][m - 1];
       for (var j = m; j <= high; j++) {
         var g = 0;
         for (var i = m; i <= high; i++) g += ort[i] * V[i][j];
         // Double division avoids possible underflow
-        g = (g / ort[m]) / H[m][m-1];
+        g = (g / ort[m]) / H[m][m - 1];
         for (var i = m; i <= high; i++) V[i][j] += g * ort[i];
       }
     }
@@ -480,17 +479,17 @@ function science_lin_decomposeHqr2(d, e, H, V) {
         z = H[m][m];
         r = x - z;
         s = y - z;
-        p = (r * s - w) / H[m+1][m] + H[m][m+1];
-        q = H[m+1][m+1] - z - r - s;
-        r = H[m+2][m+1];
+        p = (r * s - w) / H[m + 1][m] + H[m][m + 1];
+        q = H[m + 1][m + 1] - z - r - s;
+        r = H[m+2][m + 1];
         s = Math.abs(p) + Math.abs(q) + Math.abs(r);
         p = p / s;
         q = q / s;
         r = r / s;
         if (m == l) break;
-        if (Math.abs(H[m][m-1]) * (Math.abs(q) + Math.abs(r)) <
-          eps * (Math.abs(p) * (Math.abs(H[m-1][m-1]) + Math.abs(z) +
-          Math.abs(H[m+1][m+1])))) {
+        if (Math.abs(H[m][m - 1]) * (Math.abs(q) + Math.abs(r)) <
+          eps * (Math.abs(p) * (Math.abs(H[m - 1][m - 1]) + Math.abs(z) +
+          Math.abs(H[m + 1][m + 1])))) {
             break;
         }
         m--;
@@ -505,9 +504,9 @@ function science_lin_decomposeHqr2(d, e, H, V) {
       for (var k = m; k <= n - 1; k++) {
         var notlast = (k != n - 1);
         if (k != m) {
-          p = H[k][k-1];
-          q = H[k+1][k-1];
-          r = (notlast ? H[k+2][k-1] : 0);
+          p = H[k][k - 1];
+          q = H[k + 1][k - 1];
+          r = (notlast ? H[k + 2][k - 1] : 0);
           x = Math.abs(p) + Math.abs(q) + Math.abs(r);
           if (x != 0) {
             p /= x;
@@ -519,8 +518,8 @@ function science_lin_decomposeHqr2(d, e, H, V) {
         s = Math.sqrt(p * p + q * q + r * r);
         if (p < 0) { s = -s; }
         if (s != 0) {
-          if (k != m) H[k][k-1] = -s * x;
-          else if (l != m) H[k][k-1] = -H[k][k-1];
+          if (k != m) H[k][k - 1] = -s * x;
+          else if (l != m) H[k][k - 1] = -H[k][k - 1];
           p += s;
           x = p / s;
           y = q / s;
@@ -530,35 +529,35 @@ function science_lin_decomposeHqr2(d, e, H, V) {
 
           // Row modification
           for (var j = k; j < nn; j++) {
-            p = H[k][j] + q * H[k+1][j];
+            p = H[k][j] + q * H[k + 1][j];
             if (notlast) {
-              p = p + r * H[k+2][j];
-              H[k+2][j] = H[k+2][j] - p * z;
+              p = p + r * H[k + 2][j];
+              H[k + 2][j] = H[k + 2][j] - p * z;
             }
             H[k][j] = H[k][j] - p * x;
-            H[k+1][j] = H[k+1][j] - p * y;
+            H[k + 1][j] = H[k + 1][j] - p * y;
           }
 
           // Column modification
-          for (var i = 0; i <= Math.min(n,k+3); i++) {
-            p = x * H[i][k] + y * H[i][k+1];
+          for (var i = 0; i <= Math.min(n, k + 3); i++) {
+            p = x * H[i][k] + y * H[i][k + 1];
             if (notlast) {
-              p += z * H[i][k+2];
-              H[i][k+2] = H[i][k+2] - p * r;
+              p += z * H[i][k + 2];
+              H[i][k + 2] = H[i][k + 2] - p * r;
             }
             H[i][k] = H[i][k] - p;
-            H[i][k+1] = H[i][k+1] - p * q;
+            H[i][k + 1] = H[i][k + 1] - p * q;
           }
 
           // Accumulate transformations
           for (var i = low; i <= high; i++) {
-            p = x * V[i][k] + y * V[i][k+1];
+            p = x * V[i][k] + y * V[i][k + 1];
             if (notlast) {
-              p = p + z * V[i][k+2];
-              V[i][k+2] = V[i][k+2] - p * r;
+              p = p + z * V[i][k + 2];
+              V[i][k + 2] = V[i][k + 2] - p * r;
             }
             V[i][k] = V[i][k] - p;
-            V[i][k+1] = V[i][k+1] - p * q;
+            V[i][k + 1] = V[i][k + 1] - p * q;
           }
         }  // (s != 0)
       }  // k loop
@@ -589,15 +588,15 @@ function science_lin_decomposeHqr2(d, e, H, V) {
             H[i][n] = -r / (w !== 0 ? w : eps * norm);
           } else {
             // Solve real equations
-            x = H[i][i+1];
-            y = H[i+1][i];
+            x = H[i][i + 1];
+            y = H[i + 1][i];
             q = (d[i] - p) * (d[i] - p) + e[i] * e[i];
             t = (x * s - z * r) / q;
             H[i][n] = t;
             if (Math.abs(x) > Math.abs(z)) {
-              H[i+1][n] = (-r - w * t) / x;
+              H[i + 1][n] = (-r - w * t) / x;
             } else {
-              H[i+1][n] = (-s - y * t) / z;
+              H[i + 1][n] = (-s - y * t) / z;
             }
           }
 
@@ -646,8 +645,8 @@ function science_lin_decomposeHqr2(d, e, H, V) {
             H[i][n] = zz[1];
           } else {
             // Solve complex equations
-            x = H[i][i+1];
-            y = H[i+1][i];
+            x = H[i][i + 1];
+            y = H[i + 1][i];
             vr = (d[i] - p) * (d[i] - p) + e[i] * e[i] - q * q;
             vi = (d[i] - p) * 2.0 * q;
             if (vr == 0 & vi == 0) {
@@ -658,12 +657,12 @@ function science_lin_decomposeHqr2(d, e, H, V) {
             H[i][n - 1] = zz[0];
             H[i][n] = zz[1];
             if (Math.abs(x) > (Math.abs(z) + Math.abs(q))) {
-              H[i+1][n - 1] = (-ra - w * H[i][n - 1] + q * H[i][n]) / x;
-              H[i+1][n] = (-sa - w * H[i][n] - q * H[i][n - 1]) / x;
+              H[i + 1][n - 1] = (-ra - w * H[i][n - 1] + q * H[i][n]) / x;
+              H[i + 1][n] = (-sa - w * H[i][n] - q * H[i][n - 1]) / x;
             } else {
               var zz = science_lin_decomposeCdiv(-r-y*H[i][n - 1],-s-y*H[i][n],z,q);
-              H[i+1][n - 1] = zz[0];
-              H[i+1][n] = zz[1];
+              H[i + 1][n - 1] = zz[0];
+              H[i + 1][n] = zz[1];
             }
           }
 
