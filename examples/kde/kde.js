@@ -4,25 +4,25 @@ d3.json("faithful.json", function(faithful) {
   var w = 800,
       h = 400,
       x = d3.scale.linear().domain([30, 110]).range([0, w]);
-      bins = d3.layout.histogram().frequency(true).bins(x.ticks(60))(data),
+      bins = d3.layout.histogram().frequency(false).bins(x.ticks(60))(data),
       max = d3.max(bins, function(d) { return d.y; }),
       y = d3.scale.linear().domain([0, .1]).range([0, h]),
       kde = science.stats.kde().sample(data);
 
   var vis = d3.select("body")
-    .append("svg:svg")
+    .append("svg")
       .attr("width", w)
       .attr("height", h);
 
   var bars = vis.selectAll("g.bar")
       .data(bins)
-    .enter().append("svg:g")
+    .enter().append("g")
       .attr("class", "bar")
       .attr("transform", function(d, i) {
         return "translate(" + x(d.x) + "," + (h - y(d.y)) + ")";
       });
 
-  bars.append("svg:rect")
+  bars.append("rect")
       .attr("fill", "steelblue")
       .attr("width", function(d) { return x(d.dx + 30) - 1; })
       .attr("height", function(d) { return y(d.y); });
@@ -33,7 +33,7 @@ d3.json("faithful.json", function(faithful) {
 
   vis.selectAll("path")
       .data(d3.values(science.stats.bandwidth))
-    .enter().append("svg:path")
+    .enter().append("path")
       .attr("d", function(h) {
         return line(kde.bandwidth(h)(d3.range(30, 110, .1)));
       });

@@ -13,10 +13,10 @@ var vis = d3.select("#vis")
       x: d3.range(n).map(function(i) { return i / n; }),
       y: d3.range(n).map(function(i) { return Math.sin(4 * i * Math.PI / n) + (Math.random() - .5) / 5; })
     }])
-  .append("svg:svg")
+  .append("svg")
     .attr("width", w + p + p)
     .attr("height", h + p + p)
-  .append("svg:g")
+  .append("g")
     .attr("transform", "translate(" + p + "," + p + ")");
 
 var loess = science.stats.loess().bandwidth(.2),
@@ -26,7 +26,7 @@ var loess = science.stats.loess().bandwidth(.2),
 
 vis.selectAll("circle")
     .data(function(d) { return d3.zip(d.x, d.y); })
-  .enter().append("svg:circle")
+  .enter().append("circle")
     .attr("cx", function(d) { return x(d[0]); })
     .attr("cy", function(d) { return y(d[1]); })
     .attr("r", 3);
@@ -35,7 +35,7 @@ vis.selectAll("path")
     .data(function(d) {
       return [d3.zip(d.x, loess(d.x, d.y))];
     })
-  .enter().append("svg:path")
+  .enter().append("path")
     .attr("d", line);
 
 vis.append("g")
