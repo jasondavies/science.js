@@ -1,11 +1,12 @@
 var w = 960,
     h = 500,
-    p = 5.5,
-    n = 100;
+    p = 35.5,
+    n = 100,
+    x = d3.scale.linear().range([0, w]),
+    y = d3.scale.linear().domain([-1.5, 1.5]).range([h, 0]);
 
-var chart = d3.chart.scatter()
-    .width(w)
-    .height(h);
+var xAxis = d3.svg.axis().scale(x),
+    yAxis = d3.svg.axis().scale(y);
 
 var vis = d3.select("#vis")
     .data([{
@@ -16,19 +17,18 @@ var vis = d3.select("#vis")
     .attr("width", w + p + p)
     .attr("height", h + p + p)
   .append("svg:g")
-    .attr("transform", "translate(" + p + "," + p + ")")
-    .call(chart);
+    .attr("transform", "translate(" + p + "," + p + ")");
 
-var loess = science.stats.loess()
-    .bandwidth(.2),
-    x = vis[0][0].__chart__.x,
-    y = vis[0][0].__chart__.y,
+var loess = science.stats.loess().bandwidth(.2),
     line = d3.svg.line()
       .x(function(d) { return x(d[0]); })
       .y(function(d) { return y(d[1]); });
 
-vis.selectAll("g.datum")
-    .append("svg:circle")
+vis.selectAll("circle")
+    .data(function(d) { return d3.zip(d.x, d.y); })
+  .enter().append("svg:circle")
+    .attr("cx", function(d) { return x(d[0]); })
+    .attr("cy", function(d) { return y(d[1]); })
     .attr("r", 3);
 
 vis.selectAll("path")
@@ -37,3 +37,12 @@ vis.selectAll("path")
     })
   .enter().append("svg:path")
     .attr("d", line);
+
+vis.append("g")
+    .attr("class", "bottom axis")
+    .attr("transform", "translate(0," + h + ")")
+    .call(xAxis.orient("bottom"));
+
+vis.append("g")
+    .attr("class", "left axis")
+    .call(yAxis.orient("left"));
