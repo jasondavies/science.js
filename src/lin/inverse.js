@@ -1,6 +1,6 @@
 // Find matrix inverse using Gauss-Jordan.
 science.lin.inverse = function(m) {
-  var n = m.length
+  var n = m.length,
       i = -1;
 
   // Check if the matrix is square.
