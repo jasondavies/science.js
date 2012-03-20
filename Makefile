@@ -15,8 +15,7 @@ all: \
 	science.core.js \
 	science.lin.js \
 	science.stats.js \
-	src/end.js \
-	src/export.js
+	src/end.js
 
 science.core.js: \
 	src/core/core.js \

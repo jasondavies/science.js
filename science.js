@@ -1,4 +1,6 @@
-(function(){science = {version: "1.8.0"}; // semver
+(function(exports){
+science = {version: "1.8.0"}; // semver
+exports.science = science;
 science.ascending = function(a, b) {
   return a - b;
 };
@@ -1732,5 +1734,4 @@ science.stats.distribution.gaussian = function() {
 };
 
 science_stats_distribution_gaussianConstant = 1 / Math.sqrt(2 * Math.PI);
-})();
-exports.science = science;
+})(this);

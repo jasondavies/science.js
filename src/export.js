@@ -1,1 +1,0 @@
-exports.science = science;
