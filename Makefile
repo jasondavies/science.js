@@ -13,7 +13,8 @@ all: \
 .INTERMEDIATE science.js: \
 	src/start.js \
 	science.core.js \
-	src/end.js
+	src/end.js \
+	src/export.js
 
 science.core.js: \
 	src/core/core.js \

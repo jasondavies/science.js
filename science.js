@@ -70,3 +70,4 @@ science.zeroes = function(n) {
   return a;
 };
 })();
+exports.science = science;
