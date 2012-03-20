@@ -73,6 +73,10 @@ test: all
 package.json: science.js src/package.js
 	node src/package.js > $@
 
+install:
+	mkdir -p node_modules
+	npm install
+
 science.js science%.js: Makefile
 	@rm -f $@
 	cat $(filter %.js,$^) > $@
