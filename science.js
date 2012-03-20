@@ -69,4 +69,4 @@ science.zeroes = function(n) {
         this, Array.prototype.slice.call(arguments, 1));
   return a;
 };
-})()
+})();

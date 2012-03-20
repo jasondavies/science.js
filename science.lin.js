@@ -725,7 +725,7 @@ science.lin.dot = function(a, b) {
   return s;
 };
 science.lin.length = function(p) {
-  return Math.sqrt(science.vector.dot(p, p));
+  return Math.sqrt(science.lin.dot(p, p));
 };
 science.lin.normalize = function(p) {
   var length = science.lin.length(p);
@@ -805,7 +805,7 @@ science.lin.gaussjordan = function(m, eps) {
 };
 // Find matrix inverse using Gauss-Jordan.
 science.lin.inverse = function(m) {
-  var n = m.length
+  var n = m.length,
       i = -1;
 
   // Check if the matrix is square.
@@ -885,4 +885,4 @@ science.lin.tridag = function(a, b, c, d, x, n) {
     x[i] = (d[i] - c[i] * x[i + 1]) / b[i];
   }
 };
-})()
+})();
