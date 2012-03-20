@@ -1,4 +1,4 @@
-(function(){science.lin = {};
+science.lin = {};
 science.lin.decompose = function() {
 
   function decompose(A) {
@@ -885,4 +885,3 @@ science.lin.tridag = function(a, b, c, d, x, n) {
     x[i] = (d[i] - c[i] * x[i + 1]) / b[i];
   }
 };
-})();

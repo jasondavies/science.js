@@ -13,6 +13,8 @@ all: \
 .INTERMEDIATE science.js: \
 	src/start.js \
 	science.core.js \
+	science.lin.js \
+	science.stats.js \
 	src/end.js \
 	src/export.js
 
@@ -27,7 +29,6 @@ science.core.js: \
 	src/core/zeroes.js
 
 science.lin.js: \
-	src/start.js \
 	src/lin/lin.js \
 	src/lin/decompose.js \
 	src/lin/cross.js \
@@ -39,11 +40,9 @@ science.lin.js: \
 	src/lin/inverse.js \
 	src/lin/multiply.js \
 	src/lin/transpose.js \
-	src/lin/tridag.js \
-	src/end.js
+	src/lin/tridag.js
 
 science.stats.js: \
-	src/start.js \
 	src/stats/stats.js \
 	src/stats/bandwidth.js \
 	src/stats/distance.js \
@@ -61,8 +60,7 @@ science.stats.js: \
 	src/stats/quantiles.js \
 	src/stats/variance.js \
 	src/stats/distribution.js \
-	src/stats/distribution/gaussian.js \
-	src/end.js
+	src/stats/distribution/gaussian.js
 
 test: all
 	@$(JS_TESTER)
