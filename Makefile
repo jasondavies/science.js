@@ -1,18 +1,17 @@
-JS_COMPILER = ./node_modules/uglify-js/bin/uglifyjs
-JS_TESTER = ./node_modules/vows/bin/vows
+NODE_PATH ?= ./node_modules
+JS_COMPILER = $(NODE_PATH)/uglify-js/bin/uglifyjs
+JS_TESTER = $(NODE_PATH)/vows/bin/vows
 
 all: \
-	science.js \
-	science.min.js \
-	science.lin.js \
-	science.lin.min.js \
-	science.stats.js \
-	science.stats.min.js \
+	science.v1.js \
+	science.v1.min.js \
 	package.json
 
-.INTERMEDIATE science.js: \
+.INTERMEDIATE science.v1.js: \
 	src/start.js \
 	science.core.js \
+	science.lin.js \
+	science.stats.js \
 	src/end.js
 
 science.core.js: \
@@ -26,7 +25,6 @@ science.core.js: \
 	src/core/zeroes.js
 
 science.lin.js: \
-	src/start.js \
 	src/lin/lin.js \
 	src/lin/decompose.js \
 	src/lin/cross.js \
@@ -38,11 +36,9 @@ science.lin.js: \
 	src/lin/inverse.js \
 	src/lin/multiply.js \
 	src/lin/transpose.js \
-	src/lin/tridag.js \
-	src/end.js
+	src/lin/tridag.js
 
 science.stats.js: \
-	src/start.js \
 	src/stats/stats.js \
 	src/stats/bandwidth.js \
 	src/stats/distance.js \
@@ -60,8 +56,7 @@ science.stats.js: \
 	src/stats/quantiles.js \
 	src/stats/variance.js \
 	src/stats/distribution.js \
-	src/stats/distribution/gaussian.js \
-	src/end.js
+	src/stats/distribution/gaussian.js
 
 test: all
 	@$(JS_TESTER)
@@ -70,19 +65,19 @@ test: all
 	@rm -f $@
 	$(JS_COMPILER) < $< > $@
 
-package.json: science.js src/package.js
-	node src/package.js > $@
-
-science.js science%.js: Makefile
+science%.js: Makefile
 	@rm -f $@
 	cat $(filter %.js,$^) > $@
+	@chmod a-w $@
 
-%.test: %.js %.out all
-	@/bin/echo -n "test: $* "
-	@node $< > $*.actual
-	@diff -U 3 $*.out $*.actual && rm -f $*.actual \
-		&& echo '\033[1;32mPASS\033[0m' \
-		|| echo test: $* '\033[1;31mFAIL\033[0m'
+install:
+	mkdir -p node_modules
+	npm install
+
+package.json: science.v1.js src/package.js
+	@rm -f $@
+	node src/package.js > $@
+	@chmod a-w $@
 
 clean:
-	rm -f science*.js
+	rm -f science*.js package.json

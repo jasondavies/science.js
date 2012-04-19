@@ -1,5 +1,5 @@
-require("../../science");
-require("../../science.stats");
+require("../../science.v1");
+require("../../science.v1");
 
 var vows = require("vows"),
     assert = require("assert");

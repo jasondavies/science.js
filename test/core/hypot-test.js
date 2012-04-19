@@ -1,4 +1,4 @@
-require("../../science");
+require("../../science.v1");
 
 var vows = require("vows"),
     assert = require("assert");
