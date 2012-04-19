@@ -1,6 +1,6 @@
 {
   "name": "science.js",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "Scientific and statistical computing in JavaScript.",
   "keywords": [
     "science",
@@ -17,7 +17,7 @@
     "url": "http://github.com/jasondavies/science.js.git"
   },
   "devDependencies": {
-    "uglify-js": "1.2.2",
+    "uglify-js": "1.2.6",
     "vows": "0.6.0"
   }
 }
