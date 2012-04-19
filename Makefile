@@ -8,11 +8,10 @@ all: \
 	package.json
 
 .INTERMEDIATE science.v1.js: \
-	src/start.js \
 	science.core.js \
 	science.lin.js \
 	science.stats.js \
-	src/end.js
+	Makefile
 
 science.core.js: \
 	src/core/core.js \
@@ -65,9 +64,11 @@ test: all
 	@rm -f $@
 	$(JS_COMPILER) < $< > $@
 
-science%.js: Makefile
+%.js:
 	@rm -f $@
-	cat $(filter %.js,$^) > $@
+	@echo '(function(exports){' > $@
+	cat $(filter %.js,$^) >> $@
+	@echo '})(this);' >> $@
 	@chmod a-w $@
 
 install:

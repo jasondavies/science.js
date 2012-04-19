@@ -1,4 +1,6 @@
-(function(){science = {version: "1.9.0"}; // semver
+(function(exports){
+(function(exports){
+var science = exports.science = {version: "1.9.0"}; // semver
 science.ascending = function(a, b) {
   return a - b;
 };
@@ -69,6 +71,8 @@ science.zeroes = function(n) {
         this, Array.prototype.slice.call(arguments, 1));
   return a;
 };
+})(this);
+(function(exports){
 science.lin = {};
 science.lin.decompose = function() {
 
@@ -956,6 +960,8 @@ science.lin.tridag = function(a, b, c, d, x, n) {
     x[i] = (d[i] - c[i] * x[i + 1]) / b[i];
   }
 };
+})(this);
+(function(exports){
 science.stats = {};
 // Bandwidth selectors for Gaussian kernels.
 // Based on R's implementations in `stats.bw`.
@@ -1732,4 +1738,5 @@ science.stats.distribution.gaussian = function() {
 };
 
 science_stats_distribution_gaussianConstant = 1 / Math.sqrt(2 * Math.PI);
-})();
+})(this);
+})(this);
