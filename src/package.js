@@ -1,4 +1,4 @@
-require("../science.v1");
+require("./core/core");
 
 require("util").puts(JSON.stringify({
   "name": "science",

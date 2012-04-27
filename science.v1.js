@@ -1,6 +1,6 @@
 (function(exports){
 (function(exports){
-var science = exports.science = {version: "1.9.1"}; // semver
+science = {version: "1.9.1"}; // semver
 science.ascending = function(a, b) {
   return a - b;
 };
