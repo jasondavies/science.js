@@ -54,7 +54,7 @@ science.stats.hcluster = function() {
       c1Cluster = clusters[c1][0];
       c2Cluster = clusters[c2][0];
 
-      newCluster = {
+      var newCluster = {
         left: c1Cluster,
         right: c2Cluster,
         dist: distMatrix[c1][c2],
