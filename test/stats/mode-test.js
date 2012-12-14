@@ -9,9 +9,10 @@ var suite = vows.describe("science.stats.mode");
 suite.addBatch({
   "mode": {
     "returns correct modes": function() {
-      assert.isTrue(isNaN(science.stats.mode([])));
-      assert.equal(science.stats.mode([1, 2, 3, 4, 5]), null);
       assert.equal(science.stats.mode([1, 2, 2, 3, 4, 7, 9]), 2);
+      assert.equal(science.stats.mode([1]), 1);
+      assert.isUndefined(science.stats.mode([1, 2, 3, 4, 5]));
+      assert.isUndefined(science.stats.mode([]));
     }
   }
 });

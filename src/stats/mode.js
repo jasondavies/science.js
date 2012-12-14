@@ -1,10 +1,11 @@
 science.stats.mode = function(x) {
+  if ((n = x.length) === 1) return x[0];
   x = x.slice().sort(science.ascending);
   var mode,
-      n = x.length,
+      n,
       i = -1,
       l = i,
-      last = null,
+      last,
       max = 0,
       tmp,
       v;
