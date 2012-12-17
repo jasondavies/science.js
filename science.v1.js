@@ -1644,7 +1644,7 @@ science.stats.mode = function(x) {
       mode = [d];
     }
   }
-  return mode.length === 1 ? mode[0] : void 0;
+  if (mode.length === 1) return mode[0];
 };
 // Uses R's quantile algorithm type=7.
 science.stats.quantiles = function(d, quantiles) {
