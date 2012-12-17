@@ -1629,27 +1629,22 @@ science.stats.median = function(x) {
   return science.stats.quantiles(x, [.5])[0];
 };
 science.stats.mode = function(x) {
-  if ((n = x.length) === 1) return x[0];
-  x = x.slice().sort(science.ascending);
-  var mode,
-      n,
-      i = -1,
-      l = i,
-      last,
+  var counts = {},
+      mode = [],
       max = 0,
-      tmp,
-      v;
+      n = x.length,
+      i = -1,
+      d,
+      k;
   while (++i < n) {
-    if ((v = x[i]) !== last) {
-      if ((tmp = i - l) > max) {
-        max = tmp;
-        mode = last;
-      }
-      last = v;
-      l = i;
+    k = counts.hasOwnProperty(d = x[i]) ? ++counts[d] : counts[d] = 1;
+    if (k === max) mode.push(d);
+    else if (k > max) {
+      max = k;
+      mode = [d];
     }
   }
-  return mode;
+  return mode.length === 1 ? mode[0] : void 0;
 };
 // Uses R's quantile algorithm type=7.
 science.stats.quantiles = function(d, quantiles) {
