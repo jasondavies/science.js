@@ -1,7 +1,6 @@
 # Science.js
 
-[Science.js](http://www.sciencejs.org/) is a JavaScript library for scientific
-and statistical computing.
+Science.js is a JavaScript library for scientific and statistical computing.
 
 Currently, there are two modules:
 
