@@ -1,6 +1,6 @@
 science.stats.hcluster = function() {
   var distance = science.stats.distance.euclidean,
-      linkage = "simple"; // simple, complete or average
+      linkage = "single"; // single, complete or average
 
   function hcluster(vectors) {
     var n = vectors.length,
