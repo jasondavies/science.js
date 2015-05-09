@@ -1662,9 +1662,7 @@ science.stats.quantiles = function(d, quantiles) {
     return h === 0 ? a : a + h * (d[lo] - a);
   });
 };
-// Unbiased estimate of a sample's variance.
-// Also known as the sample variance, where the denominator is n - 1.
-science.stats.variance = function(x) {
+function variance_by_y(x, y) {
   var n = x.length;
   if (n < 1) return NaN;
   if (n === 1) return 0;
@@ -1675,8 +1673,17 @@ science.stats.variance = function(x) {
     var v = x[i] - mean;
     s += v * v;
   }
-  return s / (n - 1);
+  return s / (n + y);
+}
+// Unbiased estimate of a sample's variance.
+// Also known as the sample variance, where the denominator is n - 1.
+science.stats.variance = function(x) {
+  return variance_by_y(x, -1);
 };
+
+science.stats.population_variance = function(x) {
+  return variance_by_y(x, 0);
+}
 science.stats.distribution = {
 };
 // From http://www.colingodsey.com/javascript-gaussian-random-number-generator/
@@ -1734,5 +1741,7 @@ science.stats.distribution.gaussian = function() {
 };
 
 science_stats_distribution_gaussianConstant = 1 / Math.sqrt(2 * Math.PI);
-})(this);
+science.stats.standard_deviation = function(x) {
+  return Math.sqrt(science.stats.population_variance(x));
+};})(this);
 })(this);

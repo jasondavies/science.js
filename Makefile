@@ -55,7 +55,8 @@ science.stats.js: \
 	src/stats/quantiles.js \
 	src/stats/variance.js \
 	src/stats/distribution.js \
-	src/stats/distribution/gaussian.js
+	src/stats/distribution/gaussian.js \
+	src/stats/standard_deviation.js
 
 test: all
 	@$(JS_TESTER)
