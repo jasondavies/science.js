@@ -1,6 +1,6 @@
 // Based on org.apache.commons.math.analysis.interpolation.LoessInterpolator
 // from http://commons.apache.org/math/
-science.stats.loess = function() {    
+science.stats.loess = function() {
   var bandwidth = .3,
       robustnessIters = 2,
       accuracy = 1e-12;
@@ -113,9 +113,7 @@ science.stats.loess = function() {
       // Recompute the robustness weights.
 
       // Find the median residual.
-      var sortedResiduals = residuals.slice();
-      sortedResiduals.sort();
-      var medianResidual = sortedResiduals[Math.floor(n / 2)];
+      var medianResidual = science.stats.median(residuals);
 
       if (Math.abs(medianResidual) < accuracy)
         break;
