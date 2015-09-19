@@ -3,7 +3,7 @@ d3.json("faithful.json", function(faithful) {
   data = faithful;
   var w = 800,
       h = 400,
-      x = d3.scale.linear().domain([30, 110]).range([0, w]);
+      x = d3.scale.linear().domain([30, 110]).range([0, w]),
       bins = d3.layout.histogram().frequency(false).bins(x.ticks(60))(data),
       max = d3.max(bins, function(d) { return d.y; }),
       y = d3.scale.linear().domain([0, .1]).range([0, h]),
