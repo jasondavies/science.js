@@ -23,6 +23,6 @@
     "test": "node --test test/core/*-test.js test/lin/*-test.js test/stats/*-test.js test/stats/distribution/*-test.js"
   },
   "devDependencies": {
-    "uglify-js": "2.4.24"
+    "esbuild": "0.25.10"
   }
 }

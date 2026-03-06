@@ -1,5 +1,5 @@
 NODE_PATH ?= ./node_modules
-JS_COMPILER = $(NODE_PATH)/uglify-js/bin/uglifyjs
+JS_COMPILER = $(NODE_PATH)/.bin/esbuild
 JS_TESTER = node --test
 
 all: \
@@ -68,7 +68,7 @@ test: all
 
 %.min.js: %.js Makefile
 	@rm -f $@
-	$(JS_COMPILER) < $< > $@
+	$(JS_COMPILER) $< --minify --outfile=$@
 
 %.js:
 	@rm -f $@
