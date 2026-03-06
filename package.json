@@ -3,7 +3,12 @@
   "version": "1.9.3",
   "type": "module",
   "main": "./index.js",
-  "exports": "./index.js",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "default": "./index.js"
+    }
+  },
   "description": "Scientific and statistical computing in JavaScript.",
   "keywords": [
     "science",
@@ -19,6 +24,12 @@
     "type": "git",
     "url": "http://github.com/jasondavies/science.js.git"
   },
+  "files": [
+    "dist/",
+    "index.js",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "test": "node --test test/core/*-test.js test/lin/*-test.js test/stats/*-test.js test/stats/distribution/*-test.js"
   },

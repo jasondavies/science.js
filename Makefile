@@ -3,16 +3,16 @@ JS_COMPILER = $(NODE_PATH)/.bin/esbuild
 JS_TESTER = node --test
 
 all: \
-	science.js \
-	science.min.js
+	dist/science.js \
+	dist/science.min.js
 
 .INTERMEDIATE: science.core.js science.lin.js science.stats.js
 
-science.js: \
+dist/science.js: \
 	science.core.js \
 	science.lin.js \
 	science.stats.js \
-	Makefile
+	Makefile | dist
 	@rm -f $@
 	@echo '(function(exports){' > $@
 	cat science.core.js science.lin.js science.stats.js >> $@
@@ -70,6 +70,9 @@ test: all
 	@rm -f $@
 	$(JS_COMPILER) $< --minify --outfile=$@
 
+dist:
+	mkdir -p dist
+
 %.js:
 	@rm -f $@
 	@echo '(function(exports){' > $@
@@ -84,4 +87,4 @@ install:
 	npm install
 
 clean:
-	rm -f science*.js
+	rm -f science*.js dist/science*.js

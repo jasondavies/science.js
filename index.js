@@ -1,4 +1,4 @@
-import "./science.js";
+import "./dist/science.js";
 
 const science = globalThis.science;
 
