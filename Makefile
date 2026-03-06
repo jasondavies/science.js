@@ -3,14 +3,21 @@ JS_COMPILER = $(NODE_PATH)/uglify-js/bin/uglifyjs
 JS_TESTER = node --test
 
 all: \
-	science.v1.js \
-	science.v1.min.js
+	science.js \
+	science.min.js
 
-.INTERMEDIATE science.v1.js: \
+.INTERMEDIATE: science.core.js science.lin.js science.stats.js
+
+science.js: \
 	science.core.js \
 	science.lin.js \
 	science.stats.js \
 	Makefile
+	@rm -f $@
+	@echo '(function(exports){' > $@
+	cat science.core.js science.lin.js science.stats.js >> $@
+	@echo '})(globalThis);' >> $@
+	@chmod a-w $@
 
 science.core.js: \
 	src/core/core.js \
@@ -66,8 +73,10 @@ test: all
 %.js:
 	@rm -f $@
 	@echo '(function(exports){' > $@
+	@echo 'var science = globalThis.science || (globalThis.science = {});' >> $@
 	cat $(filter %.js,$^) >> $@
-	@echo '})(this);' >> $@
+	@echo 'globalThis.science = science;' >> $@
+	@echo '})(globalThis);' >> $@
 	@chmod a-w $@
 
 install:

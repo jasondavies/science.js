@@ -1,5 +1,6 @@
 (function(exports){
 (function(exports){
+var science = globalThis.science || (globalThis.science = {});
 science = {version: "1.9.3"}; // semver
 science.ascending = function(a, b) {
   return a - b;
@@ -72,8 +73,10 @@ science.zeroes = function(n) {
         this, Array.prototype.slice.call(arguments, 1));
   return a;
 };
-})(this);
+globalThis.science = science;
+})(globalThis);
 (function(exports){
+var science = globalThis.science || (globalThis.science = {});
 science.lin = {};
 science.lin.decompose = function() {
 
@@ -961,8 +964,10 @@ science.lin.tridag = function(a, b, c, d, x, n) {
     x[i] = (d[i] - c[i] * x[i + 1]) / b[i];
   }
 };
-})(this);
+globalThis.science = science;
+})(globalThis);
 (function(exports){
+var science = globalThis.science || (globalThis.science = {});
 science.stats = {};
 // Bandwidth selectors for Gaussian kernels.
 // Based on R's implementations in `stats.bw`.
@@ -1736,5 +1741,6 @@ science.stats.distribution.gaussian = function() {
 };
 
 var science_stats_distribution_gaussianConstant = 1 / Math.sqrt(2 * Math.PI);
-})(this);
-})(this);
+globalThis.science = science;
+})(globalThis);
+})(globalThis);

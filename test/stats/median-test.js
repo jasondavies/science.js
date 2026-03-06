@@ -1,7 +1,6 @@
-require("../../science.v1");
-
-const test = require("node:test");
-const assert = require("../assert");
+import science from "../../index.js";
+import test from "node:test";
+import assert from "../assert.js";
 
 test("science.stats.median returns correct medians", function() {
   assert.isTrue(isNaN(science.stats.median([])));

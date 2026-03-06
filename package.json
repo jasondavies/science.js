@@ -1,6 +1,9 @@
 {
   "name": "science",
   "version": "1.9.3",
+  "type": "module",
+  "main": "./index.js",
+  "exports": "./index.js",
   "description": "Scientific and statistical computing in JavaScript.",
   "keywords": [
     "science",

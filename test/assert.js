@@ -1,5 +1,5 @@
-const assert = require("node:assert");
-const inspect = require("node:util").inspect;
+import assert from "node:assert";
+import { inspect } from "node:util";
 
 assert.isTrue = function(actual, message) {
   assert.equal(actual, true, message);
@@ -27,4 +27,4 @@ function inDelta(actual, expected, delta) {
   return actual >= expected - delta && actual <= expected + delta;
 }
 
-module.exports = assert;
+export default assert;

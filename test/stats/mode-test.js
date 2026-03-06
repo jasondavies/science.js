@@ -1,7 +1,6 @@
-require("../../science.v1");
-
-const test = require("node:test");
-const assert = require("../assert");
+import science from "../../index.js";
+import test from "node:test";
+import assert from "../assert.js";
 
 test("science.stats.mode returns correct modes", function() {
   assert.equal(science.stats.mode([1, 2, 2, 3, 4, 7, 9]), 2);

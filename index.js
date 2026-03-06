@@ -1,3 +1,6 @@
-require("./science.v1");
+import "./science.js";
 
-module.exports = science;
+const science = globalThis.science;
+
+export default science;
+export { science };
