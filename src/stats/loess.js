@@ -130,19 +130,19 @@ science.stats.loess = function() {
   }
 
   smooth.bandwidth = function(x) {
-    if (!arguments.length) return x;
+    if (!arguments.length) return bandwidth;
     bandwidth = x;
     return smooth;
   };
 
   smooth.robustnessIterations = function(x) {
-    if (!arguments.length) return x;
+    if (!arguments.length) return robustnessIters;
     robustnessIters = x;
     return smooth;
   };
 
   smooth.accuracy = function(x) {
-    if (!arguments.length) return x;
+    if (!arguments.length) return accuracy;
     accuracy = x;
     return smooth;
   };

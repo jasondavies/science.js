@@ -52,4 +52,4 @@ science.stats.distribution.gaussian = function() {
   return gaussian;
 };
 
-science_stats_distribution_gaussianConstant = 1 / Math.sqrt(2 * Math.PI);
+var science_stats_distribution_gaussianConstant = 1 / Math.sqrt(2 * Math.PI);

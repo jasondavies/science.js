@@ -1,33 +1,18 @@
 require("../../science.v1");
 
-var vows = require("vows"),
-    assert = require("assert");
+const test = require("node:test");
+const assert = require("../assert");
 
-var suite = vows.describe("science.quadratic");
-
-suite.addBatch({
-  "real roots": {
-    topic: function() {
-      return science.quadratic();
-    },
-    "no roots": function(quadratic) {
-      assert.deepEqual(quadratic(1, 1, 1), []);
-    },
-    "single root": function(quadratic) {
-      assert.deepEqual(quadratic(1, -2, 1), [1]);
-    },
-    "two roots": function(quadratic) {
-      assert.deepEqual(quadratic(1, 1, -2), [-2.5, .5]);
-    }
-  },
-  "complex roots": {
-    topic: function() {
-      return science.quadratic().complex(true);
-    },
-    "imaginary parts": function(quadratic) {
-      assert.deepEqual(quadratic(1, 0, 1), [{r: 0, i: -1}, {r: 0, i: 1}]);
-    }
-  }
+test("science.quadratic real roots", function() {
+  var quadratic = science.quadratic();
+  assert.deepEqual(quadratic(1, 1, 1), []);
+  assert.deepEqual(quadratic(1, -2, 1), [1]);
+  assert.deepEqual(quadratic(1, 1, -2), [-2, 1]);
+  assert.deepEqual(quadratic(2, 2, -4), [-2, 1]);
 });
 
-suite.export(module);
+test("science.quadratic complex roots", function() {
+  var quadratic = science.quadratic().complex(true);
+  assert.deepEqual(quadratic(1, 0, 1), [{r: 0, i: -1}, {r: 0, i: 1}]);
+  assert.deepEqual(quadratic(4, 4, 5), [{r: -0.5, i: -1}, {r: -0.5, i: 1}]);
+});

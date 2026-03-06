@@ -1,17 +1,13 @@
 require("../../science.v1");
 
-var vows = require("vows"),
-    assert = require("assert");
+const test = require("node:test");
+const assert = require("../assert");
 
-var suite = vows.describe("science.hypot");
-
-suite.addBatch({
-  "hypot": {
-    "maximum supported hypotenuse": function() {
-      var max = Number.MAX_VALUE / Math.sqrt(2);
-      assert.equal(science.hypot(max, max), 1.7976931348623155e+308);
-    }
-  }
+test("science.hypot zero vector", function() {
+  assert.equal(science.hypot(0, 0), 0);
 });
 
-suite.export(module);
+test("science.hypot maximum supported hypotenuse", function() {
+  var max = Number.MAX_VALUE / Math.sqrt(2);
+  assert.equal(science.hypot(max, max), 1.7976931348623155e+308);
+});

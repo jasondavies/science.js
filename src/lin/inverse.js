@@ -15,7 +15,7 @@ science.lin.inverse = function(m) {
   });
 
   // Compute IA^-1.
-  science.lin.gaussjordan(m);
+  if (!science.lin.gaussjordan(m)) return;
 
   // Remove identity matrix I to get A^-1.
   while (++i < n) {

@@ -7,6 +7,7 @@ science.hypot = function(x, y) {
       min;
   if (x > y) { max = x; min = y; }
   else       { max = y; min = x; }
+  if (max === 0) return 0;
   var r = min / max;
   return max * Math.sqrt(1 + r * r);
 };

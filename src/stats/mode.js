@@ -1,5 +1,5 @@
 science.stats.mode = function(x) {
-  var counts = {},
+  var counts = Object.create(null),
       mode = [],
       max = 0,
       n = x.length,
@@ -7,7 +7,8 @@ science.stats.mode = function(x) {
       d,
       k;
   while (++i < n) {
-    k = counts.hasOwnProperty(d = x[i]) ? ++counts[d] : counts[d] = 1;
+    d = x[i];
+    k = Object.prototype.hasOwnProperty.call(counts, d) ? ++counts[d] : counts[d] = 1;
     if (k === max) mode.push(d);
     else if (k > max) {
       max = k;

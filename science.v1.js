@@ -22,6 +22,7 @@ science.hypot = function(x, y) {
       min;
   if (x > y) { max = x; min = y; }
   else       { max = y; min = x; }
+  if (max === 0) return 0;
   var r = min / max;
   return max * Math.sqrt(1 + r * r);
 };
@@ -30,20 +31,20 @@ science.quadratic = function() {
 
   function quadratic(a, b, c) {
     var d = b * b - 4 * a * c;
+    var rb = -b / (2 * a);
     if (d > 0) {
       d = Math.sqrt(d) / (2 * a);
       return complex
-        ? [{r: -b - d, i: 0}, {r: -b + d, i: 0}]
-        : [-b - d, -b + d];
+        ? [{r: rb - d, i: 0}, {r: rb + d, i: 0}]
+        : [rb - d, rb + d];
     } else if (d === 0) {
-      d = -b / (2 * a);
-      return complex ? [{r: d, i: 0}] : [d];
+      return complex ? [{r: rb, i: 0}] : [rb];
     } else {
       if (complex) {
         d = Math.sqrt(-d) / (2 * a);
         return [
-          {r: -b, i: -d},
-          {r: -b, i: d}
+          {r: rb, i: -d},
+          {r: rb, i: d}
         ];
       }
       return [];
@@ -895,7 +896,7 @@ science.lin.inverse = function(m) {
   });
 
   // Compute IA^-1.
-  science.lin.gaussjordan(m);
+  if (!science.lin.gaussjordan(m)) return;
 
   // Remove identity matrix I to get A^-1.
   while (++i < n) {
@@ -969,8 +970,9 @@ science.stats.bandwidth = {
 
   // Silverman, B. W. (1986) Density Estimation. London: Chapman and Hall.
   nrd0: function(x) {
-    var hi = Math.sqrt(science.stats.variance(x));
-    if (!(lo = Math.min(hi, science.stats.iqr(x) / 1.34)))
+    var hi = Math.sqrt(science.stats.variance(x)),
+        lo = Math.min(hi, science.stats.iqr(x) / 1.34);
+    if (!lo)
       (lo = hi) || (lo = Math.abs(x[1])) || (lo = 1);
     return .9 * lo * Math.pow(x.length, -.2);
   },
@@ -1173,6 +1175,7 @@ science.stats.kmeans = function() {
         d,
         min,
         best;
+    if (!centroids) throw {error: "Not enough distinct vectors for k clusters."};
 
     while (repeat && iterations < maxIterations) {
       // Assignment step.
@@ -1546,19 +1549,19 @@ science.stats.loess = function() {
   }
 
   smooth.bandwidth = function(x) {
-    if (!arguments.length) return x;
+    if (!arguments.length) return bandwidth;
     bandwidth = x;
     return smooth;
   };
 
   smooth.robustnessIterations = function(x) {
-    if (!arguments.length) return x;
+    if (!arguments.length) return robustnessIters;
     robustnessIters = x;
     return smooth;
   };
 
   smooth.accuracy = function(x) {
-    if (!arguments.length) return x;
+    if (!arguments.length) return accuracy;
     accuracy = x;
     return smooth;
   };
@@ -1627,7 +1630,7 @@ science.stats.median = function(x) {
   return science.stats.quantiles(x, [.5])[0];
 };
 science.stats.mode = function(x) {
-  var counts = {},
+  var counts = Object.create(null),
       mode = [],
       max = 0,
       n = x.length,
@@ -1635,7 +1638,8 @@ science.stats.mode = function(x) {
       d,
       k;
   while (++i < n) {
-    k = counts.hasOwnProperty(d = x[i]) ? ++counts[d] : counts[d] = 1;
+    d = x[i];
+    k = Object.prototype.hasOwnProperty.call(counts, d) ? ++counts[d] : counts[d] = 1;
     if (k === max) mode.push(d);
     else if (k > max) {
       max = k;
@@ -1731,6 +1735,6 @@ science.stats.distribution.gaussian = function() {
   return gaussian;
 };
 
-science_stats_distribution_gaussianConstant = 1 / Math.sqrt(2 * Math.PI);
+var science_stats_distribution_gaussianConstant = 1 / Math.sqrt(2 * Math.PI);
 })(this);
 })(this);

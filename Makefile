@@ -1,11 +1,10 @@
 NODE_PATH ?= ./node_modules
 JS_COMPILER = $(NODE_PATH)/uglify-js/bin/uglifyjs
-JS_TESTER = $(NODE_PATH)/vows/bin/vows
+JS_TESTER = node --test
 
 all: \
 	science.v1.js \
-	science.v1.min.js \
-	package.json
+	science.v1.min.js
 
 .INTERMEDIATE science.v1.js: \
 	science.core.js \
@@ -58,7 +57,7 @@ science.stats.js: \
 	src/stats/distribution/gaussian.js
 
 test: all
-	@$(JS_TESTER)
+	@$(JS_TESTER) $$(find test -name '*-test.js' | sort)
 
 %.min.js: %.js Makefile
 	@rm -f $@
@@ -75,10 +74,5 @@ install:
 	mkdir -p node_modules
 	npm install
 
-package.json: src/package.js
-	@rm -f $@
-	node src/package.js > $@
-	@chmod a-w $@
-
 clean:
-	rm -f science*.js package.json
+	rm -f science*.js

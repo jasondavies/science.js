@@ -19,6 +19,7 @@ science.stats.kmeans = function() {
         d,
         min,
         best;
+    if (!centroids) throw {error: "Not enough distinct vectors for k clusters."};
 
     while (repeat && iterations < maxIterations) {
       // Assignment step.
