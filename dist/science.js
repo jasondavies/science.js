@@ -1145,11 +1145,13 @@ var science = globalThis.science || (globalThis.science = {});
       var n = xval.length, i;
       if (n !== yval.length) throw { error: "Mismatched array lengths" };
       if (n == 0) throw { error: "At least one point required." };
+      if (!(bandwidth > 0 && bandwidth <= 1)) throw { error: "Bandwidth must be greater than 0 and at most 1." };
+      if (!(robustnessIters >= 0 && robustnessIters % 1 === 0)) throw { error: "Robustness iterations must be a non-negative integer." };
       if (arguments.length < 3) {
         weights = [];
         i = -1;
         while (++i < n) weights[i] = 1;
-      }
+      } else if (weights.length !== n) throw { error: "Mismatched array lengths" };
       science_stats_loessFiniteReal(xval);
       science_stats_loessFiniteReal(yval);
       science_stats_loessFiniteReal(weights);

@@ -32,6 +32,34 @@ test("science.stats.loess rejects non-finite values", function() {
   assert.throws(function() { loess([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 1, NaN, 1, 1]); }, error);
 });
 
+test("science.stats.loess rejects weights of the wrong length", function() {
+  var loess = science.stats.loess().bandwidth(.6),
+      error = {error: "Mismatched array lengths"};
+  assert.throws(function() { loess([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 1, 1]); }, error);
+  assert.throws(function() { loess([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 1, 1, 1, 1, 1]); }, error);
+});
+
+test("science.stats.loess rejects bandwidth outside (0, 1]", function() {
+  var x = [1, 2, 3, 4, 5],
+      error = {error: "Bandwidth must be greater than 0 and at most 1."};
+  [0, -.5, 1.5, NaN].forEach(function(bandwidth) {
+    var loess = science.stats.loess().bandwidth(bandwidth);
+    assert.throws(function() { loess(x, x); }, error);
+    assert.throws(function() { loess([1], [1]); }, error);
+  });
+  assert.deepEqual(science.stats.loess().bandwidth(1)(x, x), x);
+});
+
+test("science.stats.loess rejects invalid robustness iterations", function() {
+  var x = [1, 2, 3, 4, 5],
+      error = {error: "Robustness iterations must be a non-negative integer."};
+  [-1, 1.5, NaN].forEach(function(iterations) {
+    var loess = science.stats.loess().bandwidth(.6).robustnessIterations(iterations);
+    assert.throws(function() { loess(x, x); }, error);
+  });
+  assert.deepEqual(science.stats.loess().bandwidth(.6).robustnessIterations(0)(x, x), x);
+});
+
 test("science.stats.loess rejects x values that are not strictly increasing", function() {
   var loess = science.stats.loess().bandwidth(.6),
       error = {error: "X values must be strictly increasing."};
