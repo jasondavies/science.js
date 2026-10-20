@@ -40,7 +40,7 @@ var myLoess = science.stats.loess();
 
 <a name="loess_bandwidth" href="#loess_bandwidth">#</a> <i>loess</i>.<b>bandwidth</b>([<i>bandwidth</i>])
 
-Specifies the [bandwidth (smoothing parameter)](https://en.wikipedia.org/wiki/Local_regression#Localized_subsets_of_data) that controls how fine or coarse the smoothing is. The bandwidth is the fraction of the input points used for each local regression; it must be greater than 0 and at most 1, and defaults to 0.3. Lower values fit the curve closer to the data, higher values make the curve more straight. If *bandwidth* is not specified, returns the current bandwidth.
+Specifies the [bandwidth (smoothing parameter)](https://en.wikipedia.org/wiki/Local_regression#Localized_subsets_of_data) that controls how fine or coarse the smoothing is. The bandwidth is the fraction of the input points used for each local regression (taken from the nearest points with a positive weight); it must be greater than 0 and at most 1, and defaults to 0.3. Lower values fit the curve closer to the data, higher values make the curve more straight. If *bandwidth* is not specified, returns the current bandwidth.
 
 When the generator is invoked with three or more points, floor(*bandwidth* × *n*) must be at least 2, where *n* is the number of points, or an error is thrown. For example, the default bandwidth of 0.3 requires at least 7 points.
 
@@ -58,7 +58,7 @@ myLoess.robustnessIterations(4);
 
 <a name="loess_accuracy" href="#loess_accuracy">#</a> <i>loess</i>.<b>accuracy</b>([<i>accuracy</i>])
 
-Specifies the tolerance below which values are treated as zero, and defaults to 1e-12. If the spread of x values in a local regression is below the tolerance, a flat line is fitted there instead of a sloped one; if the median residual falls below it, the remaining robustness iterations are skipped because the fit is already exact. If *accuracy* is not specified, returns the current accuracy.
+Specifies the tolerance below which values are treated as zero; it must be a non-negative number, and defaults to 1e-12. If the spread of x values in a local regression is below the tolerance, a flat line is fitted there instead of a sloped one; if the median residual falls below it, the remaining robustness iterations are skipped because the fit is already exact. If *accuracy* is not specified, returns the current accuracy.
 
 ```javascript
 myLoess.accuracy(1e-9);
@@ -66,11 +66,11 @@ myLoess.accuracy(1e-9);
 
 <a name="_loess" href="#_loess">#</a> <i>loess</i>(<i>xValues</i>, <i>yValues</i>[, <i>weights</i>])
 
-Invokes the LOESS algorithm to generate the smoothed curve. Accepts as input two arrays of values in data space. These two arrays must be of the same length, all values must be finite, and *xValues* must be strictly increasing (sorted in ascending order, with no duplicates). Returns an array of smoothed Y values that has the same number of elements as the input arrays.
+Invokes the LOESS algorithm to generate the smoothed curve. Accepts as input two arrays of values in data space. These two arrays must be of the same length, all values must be finite numbers, and *xValues* must be sorted in ascending order (tied values are allowed). Returns an array of smoothed Y values that has the same number of elements as the input arrays.
 
-The optional *weights* array gives a non-negative weight for each point, which scales its influence on the local regressions; points with a weight of zero are ignored. *weights* must have the same length as the other two arrays. If *weights* is not specified, all points have a weight of 1.
+The optional *weights* array gives a non-negative weight for each point, which scales its influence on the local regressions. Points with a weight of zero have no influence, but are still given a smoothed value from their neighbours. *weights* must have the same length as the other two arrays, and at least one weight must be positive. If *weights* is not specified (or is null or undefined), all points have a weight of 1.
 
-If the input or configuration is invalid, an object of the form `{error: "message"}` is thrown (not an `Error` instance). An invalid bandwidth or number of robustness iterations is reported when the generator is invoked, not when it is set.
+If the input or configuration is invalid, an object of the form `{error: "message"}` is thrown (not an `Error` instance). An invalid bandwidth, number of robustness iterations or accuracy is reported when the generator is invoked, not when it is set.
 
 ```javascript
 var yValuesSmooth = myLoess(xValues, yValues);

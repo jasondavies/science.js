@@ -1147,7 +1147,8 @@ var science = globalThis.science || (globalThis.science = {});
       if (n == 0) throw { error: "At least one point required." };
       if (!(bandwidth > 0 && bandwidth <= 1)) throw { error: "Bandwidth must be greater than 0 and at most 1." };
       if (!(robustnessIters >= 0 && robustnessIters % 1 === 0)) throw { error: "Robustness iterations must be a non-negative integer." };
-      if (arguments.length < 3) {
+      if (!(accuracy >= 0)) throw { error: "Accuracy must be a non-negative number." };
+      if (weights == null) {
         weights = [];
         i = -1;
         while (++i < n) weights[i] = 1;
@@ -1155,12 +1156,19 @@ var science = globalThis.science || (globalThis.science = {});
       science_stats_loessFiniteReal(xval);
       science_stats_loessFiniteReal(yval);
       science_stats_loessFiniteReal(weights);
-      science_stats_loessStrictlyIncreasing(xval);
+      science_stats_loessSorted(xval);
+      var points = [];
+      i = -1;
+      while (++i < n) {
+        if (weights[i] < 0) throw { error: "Weights must be non-negative." };
+        if (weights[i] > 0) points.push(i);
+      }
+      if (!points.length) throw { error: "At least one weight must be positive." };
       if (n == 1) return [yval[0]];
       if (n == 2) return [yval[0], yval[1]];
       var bandwidthInPoints = Math.floor(bandwidth * n);
       if (bandwidthInPoints < 2) throw { error: "Bandwidth too small." };
-      var res = [], residuals = [], robustnessWeights = [];
+      var m = points.length, q = Math.min(bandwidthInPoints, m), res = [], residuals = [], robustnessWeights = [];
       i = -1;
       while (++i < n) {
         res[i] = 0;
@@ -1169,41 +1177,35 @@ var science = globalThis.science || (globalThis.science = {});
       }
       var iter = -1;
       while (++iter <= robustnessIters) {
-        var bandwidthInterval = [0, bandwidthInPoints - 1];
-        var x;
+        var left = 0, right = q - 1, x;
         i = -1;
         while (++i < n) {
           x = xval[i];
-          if (i > 0) {
-            science_stats_loessUpdateBandwidthInterval(xval, weights, i, bandwidthInterval);
+          while (right < m - 1 && xval[points[right + 1]] - x < x - xval[points[left]]) {
+            left++;
+            right++;
           }
-          var ileft = bandwidthInterval[0], iright = bandwidthInterval[1];
-          var edge = xval[i] - xval[ileft] > xval[iright] - xval[i] ? ileft : iright;
-          var sumWeights = 0, sumX = 0, sumXSquared = 0, sumY = 0, sumXY = 0, denom = xval[edge] === x ? 0 : Math.abs(1 / (xval[edge] - x));
-          for (var k = ileft; k <= iright; ++k) {
-            var xk = xval[k], yk = yval[k], dist = k < i ? x - xk : xk - x, w = science_stats_loessTricube(dist * denom) * robustnessWeights[k] * weights[k], xkw = xk * w;
-            sumWeights += w;
-            sumX += xkw;
-            sumXSquared += xk * xkw;
-            sumY += yk * w;
-            sumXY += yk * xkw;
+          var h = Math.max(x - xval[points[left]], xval[points[right]] - x), lo = left, hi = right;
+          while (lo > 0 && x - xval[points[lo - 1]] <= h) lo--;
+          while (hi < m - 1 && xval[points[hi + 1]] - x <= h) hi++;
+          var fit = localFit(xval, yval, weights, robustnessWeights, points, lo, hi, x, h, true, true);
+          if (fit == null) {
+            if (weights[i] > 0) fit = yval[i];
+            else {
+              fit = localFit(xval, yval, weights, robustnessWeights, points, lo, hi, x, h, false, true);
+              if (fit == null) fit = localFit(xval, yval, weights, robustnessWeights, points, lo, hi, x, h, false, false);
+            }
           }
-          if (!(sumWeights > 0)) {
-            res[i] = yval[i];
-            residuals[i] = 0;
-            continue;
-          }
-          var meanX = sumX / sumWeights, meanY = sumY / sumWeights, meanXY = sumXY / sumWeights, meanXSquared = sumXSquared / sumWeights;
-          var beta = Math.sqrt(Math.abs(meanXSquared - meanX * meanX)) < accuracy ? 0 : (meanXY - meanX * meanY) / (meanXSquared - meanX * meanX);
-          var alpha = meanY - beta * meanX;
-          res[i] = beta * x + alpha;
-          residuals[i] = Math.abs(yval[i] - res[i]);
+          res[i] = fit;
+          residuals[i] = Math.abs(yval[i] - fit);
         }
         if (iter === robustnessIters) {
           break;
         }
-        var medianResidual = science.stats.median(residuals);
-        if (Math.abs(medianResidual) < accuracy)
+        var medianResidual = science.stats.median(points.map(function(p) {
+          return residuals[p];
+        }));
+        if (medianResidual < accuracy || !medianResidual)
           break;
         var arg, w;
         i = -1;
@@ -1213,6 +1215,31 @@ var science = globalThis.science || (globalThis.science = {});
         }
       }
       return res;
+    }
+    function localFit(xval, yval, weights, robustnessWeights, points, lo, hi, x, h, local, robust) {
+      var sumWeights = 0, sumX = 0, sumY = 0, k, p, w;
+      for (k = lo; k <= hi; ++k) {
+        p = points[k];
+        w = weights[p];
+        if (robust) w *= robustnessWeights[p];
+        if (local && h > 0) w *= science_stats_loessTricube(Math.abs(xval[p] - x) / h);
+        sumWeights += w;
+        sumX += w * (xval[p] - x);
+        sumY += w * yval[p];
+      }
+      if (!(sumWeights > 0)) return null;
+      var meanX = sumX / sumWeights, meanY = sumY / sumWeights, sumXX = 0, sumXY = 0, dx;
+      for (k = lo; k <= hi; ++k) {
+        p = points[k];
+        w = weights[p];
+        if (robust) w *= robustnessWeights[p];
+        if (local && h > 0) w *= science_stats_loessTricube(Math.abs(xval[p] - x) / h);
+        dx = xval[p] - x - meanX;
+        sumXX += w * dx * dx;
+        sumXY += w * dx * (yval[p] - meanY);
+      }
+      var beta = Math.sqrt(sumXX / sumWeights) < accuracy || !sumXX ? 0 : sumXY / sumXX;
+      return meanY - beta * meanX;
     }
     smooth.bandwidth = function(x) {
       if (!arguments.length) return bandwidth;
@@ -1233,28 +1260,14 @@ var science = globalThis.science || (globalThis.science = {});
   };
   function science_stats_loessFiniteReal(values) {
     var n = values.length, i = -1;
-    while (++i < n) if (!isFinite(values[i])) throw { error: "Values must be finite." };
+    while (++i < n) if (!Number.isFinite(values[i])) throw { error: "Values must be finite numbers." };
   }
-  function science_stats_loessStrictlyIncreasing(xval) {
+  function science_stats_loessSorted(xval) {
     var n = xval.length, i = 0;
-    while (++i < n) if (xval[i - 1] >= xval[i]) throw { error: "X values must be strictly increasing." };
+    while (++i < n) if (xval[i - 1] > xval[i]) throw { error: "X values must be sorted in ascending order." };
   }
   function science_stats_loessTricube(x) {
     return (x = 1 - x * x * x) * x * x;
-  }
-  function science_stats_loessUpdateBandwidthInterval(xval, weights, i, bandwidthInterval) {
-    var left = bandwidthInterval[0], right = bandwidthInterval[1];
-    var nextRight = science_stats_loessNextNonzero(weights, right);
-    if (nextRight < xval.length && xval[nextRight] - xval[i] < xval[i] - xval[left]) {
-      var nextLeft = science_stats_loessNextNonzero(weights, left);
-      bandwidthInterval[0] = nextLeft;
-      bandwidthInterval[1] = nextRight;
-    }
-  }
-  function science_stats_loessNextNonzero(weights, i) {
-    var j = i + 1;
-    while (j < weights.length && weights[j] === 0) j++;
-    return j;
   }
 
   // src/stats/mean.js
