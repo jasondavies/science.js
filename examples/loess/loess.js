@@ -1,48 +1,40 @@
-var w = 960,
-    h = 500,
-    p = 35.5,
-    n = 100,
-    x = d3.scale.linear().range([0, w]),
-    y = d3.scale.linear().domain([-1.5, 1.5]).range([h, 0]);
+import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
+import { loess } from "../../src/index.js";
 
-var xAxis = d3.svg.axis().scale(x),
-    yAxis = d3.svg.axis().scale(y);
+const width = 960,
+      height = 500,
+      margin = 35.5,
+      n = 100;
 
-var vis = d3.select("#vis")
-    .data([{
-      x: d3.range(n).map(function(i) { return i / n; }),
-      y: d3.range(n).map(function(i) { return Math.sin(4 * i * Math.PI / n) + (Math.random() - .5) / 5; })
-    }])
-  .append("svg")
-    .attr("width", w + p + p)
-    .attr("height", h + p + p)
+// A noisy sine wave, and its LOESS smoothing.
+const xs = d3.range(n).map((i) => i / n),
+      ys = xs.map((x) => Math.sin(4 * Math.PI * x) + (Math.random() - .5) / 5),
+      smoothed = loess(xs, ys, {bandwidth: .2});
+
+const x = d3.scaleLinear([0, 1], [0, width]),
+      y = d3.scaleLinear([-1.5, 1.5], [height, 0]);
+
+const svg = d3.select("#vis").append("svg")
+    .attr("width", width + 2 * margin)
+    .attr("height", height + 2 * margin)
   .append("g")
-    .attr("transform", "translate(" + p + "," + p + ")");
+    .attr("transform", `translate(${margin},${margin})`);
 
-var loess = science.stats.loess().bandwidth(.2),
-    line = d3.svg.line()
-      .x(function(d) { return x(d[0]); })
-      .y(function(d) { return y(d[1]); });
-
-vis.selectAll("circle")
-    .data(function(d) { return d3.zip(d.x, d.y); })
-  .enter().append("circle")
-    .attr("cx", function(d) { return x(d[0]); })
-    .attr("cy", function(d) { return y(d[1]); })
+svg.selectAll("circle")
+  .data(d3.zip(xs, ys))
+  .join("circle")
+    .attr("cx", ([a]) => x(a))
+    .attr("cy", ([, b]) => y(b))
     .attr("r", 3);
 
-vis.selectAll("path")
-    .data(function(d) {
-      return [d3.zip(d.x, loess(d.x, d.y))];
-    })
-  .enter().append("path")
-    .attr("d", line);
+svg.append("path")
+    .datum(d3.zip(xs, smoothed))
+    .attr("class", "curve")
+    .attr("d", d3.line(([a]) => x(a), ([, b]) => y(b)));
 
-vis.append("g")
-    .attr("class", "bottom axis")
-    .attr("transform", "translate(0," + h + ")")
-    .call(xAxis.orient("bottom"));
+svg.append("g")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(x));
 
-vis.append("g")
-    .attr("class", "left axis")
-    .call(yAxis.orient("left"));
+svg.append("g")
+    .call(d3.axisLeft(y));

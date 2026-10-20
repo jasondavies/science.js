@@ -1,40 +1,39 @@
-// Based on http://bl.ocks.org/900762 by John Firebaugh
-d3.json("faithful.json", function(faithful) {
-  data = faithful;
-  var w = 800,
-      h = 400,
-      x = d3.scale.linear().domain([30, 110]).range([0, w]),
-      bins = d3.layout.histogram().frequency(false).bins(x.ticks(60))(data),
-      max = d3.max(bins, function(d) { return d.y; }),
-      y = d3.scale.linear().domain([0, .1]).range([0, h]),
-      kde = science.stats.kde().sample(data);
+// Based on http://bl.ocks.org/900762 by John Firebaugh.
+import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
+import { bandwidths, kde } from "../../src/index.js";
 
-  var vis = d3.select("body")
-    .append("svg")
-      .attr("width", w)
-      .attr("height", h);
+// Waiting times between eruptions of the Old Faithful geyser, in minutes.
+const data = await d3.json("faithful.json");
 
-  var bars = vis.selectAll("g.bar")
-      .data(bins)
-    .enter().append("g")
-      .attr("class", "bar")
-      .attr("transform", function(d, i) {
-        return "translate(" + x(d.x) + "," + (h - y(d.y)) + ")";
-      });
+const width = 800,
+      height = 400,
+      x = d3.scaleLinear([30, 110], [0, width]),
+      y = d3.scaleLinear([0, .1], [height, 0]);
 
-  bars.append("rect")
-      .attr("fill", "steelblue")
-      .attr("width", function(d) { return x(d.dx + 30) - 1; })
-      .attr("height", function(d) { return y(d.y); });
+// A histogram of the proportion of the data in each 1-minute bin.
+const bins = d3.bin().domain(x.domain()).thresholds(d3.range(31, 110))(data);
 
-  var line = d3.svg.line()
-      .x(function(d) { return x(d[0]); })
-      .y(function(d) { return h - y(d[1]); });
+const svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
 
-  vis.selectAll("path")
-      .data(d3.values(science.stats.bandwidth))
-    .enter().append("path")
-      .attr("d", function(h) {
-        return line(kde.bandwidth(h)(d3.range(30, 110, .1)));
-      });
-});
+svg.selectAll("rect")
+  .data(bins)
+  .join("rect")
+    .attr("fill", "steelblue")
+    .attr("x", (bin) => x(bin.x0))
+    .attr("y", (bin) => y(bin.length / data.length))
+    .attr("width", (bin) => x(bin.x1) - x(bin.x0) - 1)
+    .attr("height", (bin) => height - y(bin.length / data.length));
+
+// The density estimate with each bandwidth selector.
+const line = d3.line(([a]) => x(a), ([, b]) => y(b)),
+      points = d3.range(30, 110, .1);
+
+svg.selectAll("path")
+  .data(Object.values(bandwidths))
+  .join("path")
+    .attr("d", (bandwidth) => {
+      const density = kde(data, {bandwidth});
+      return line(points.map((p) => [p, density(p)]));
+    });
