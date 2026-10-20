@@ -523,7 +523,7 @@ installed. Then run the following from the root directory of this repository:
 definitions in `index.d.ts` are maintained by hand; the tests check that they
 declare every export.
 
-The examples in `examples/` load [D3](https://d3js.org/) from a CDN and
-Science.js from `src/` as ES modules, so they must be served over HTTP. For
-example, run `python3 -m http.server` in the root directory and open
-<http://localhost:8000/examples/loess/loess.html>.
+Each example in `examples/` is a single HTML page that loads
+[D3](https://d3js.org/) from a CDN and Science.js from `src/` as ES modules, so
+they must be served over HTTP. For example, run `python3 -m http.server` in the
+root directory and open <http://localhost:8000/examples/loess/>.
