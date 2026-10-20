@@ -1,157 +1,316 @@
-var science;
-(() => {
-  // src/core/core.js
-  science = { version: "2.0.0" };
-
-  // src/core/ascending.js
-  science.ascending = function(a, b) {
-    return a - b;
+var science = (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
   };
-
-  // src/core/constants.js
-  science.EULER = 0.5772156649015329;
-
-  // src/core/expm1.js
-  science.expm1 = function(x) {
-    return x < 1e-5 && x > -1e-5 ? x + 0.5 * x * x : Math.exp(x) - 1;
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
   };
+  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-  // src/core/functor.js
-  science.functor = function(v) {
-    return typeof v === "function" ? v : function() {
-      return v;
-    };
-  };
+  // src/index.js
+  var index_exports = {};
+  __export(index_exports, {
+    EULER_GAMMA: () => EULER_GAMMA,
+    bandwidths: () => bandwidths,
+    cross: () => cross,
+    determinant: () => determinant,
+    distances: () => distances,
+    dot: () => dot,
+    eigen: () => eigen,
+    erf: () => erf,
+    erfc: () => erfc,
+    hcluster: () => hcluster,
+    inverse: () => inverse,
+    iqr: () => iqr,
+    kde: () => kde,
+    kernels: () => kernels,
+    kmeans: () => kmeans,
+    loess: () => loess,
+    mean: () => mean,
+    median: () => median,
+    modes: () => modes,
+    multiply: () => multiply,
+    norm: () => norm,
+    normal: () => normal,
+    normalize: () => normalize,
+    quadratic: () => quadratic,
+    quantile: () => quantile,
+    quantiles: () => quantiles,
+    solve: () => solve,
+    solveTridiagonal: () => solveTridiagonal,
+    standardDeviation: () => standardDeviation,
+    transpose: () => transpose,
+    variance: () => variance,
+    version: () => version
+  });
 
-  // src/core/hypot.js
-  science.hypot = function(x, y) {
-    return Math.hypot(x, y);
-  };
+  // src/version.js
+  var version = "2.0.0";
 
-  // src/core/quadratic.js
-  science.quadratic = function() {
-    var complex = false;
-    function quadratic(a, b, c) {
-      var roots;
-      if (a === 0) {
-        roots = b === 0 ? [] : [-c / b];
-      } else {
-        var d = b * b - 4 * a * c, rb = -b / (2 * a);
-        if (d > 0) {
-          var q = -(b + (b < 0 ? -1 : 1) * Math.sqrt(d)) / 2, r1 = q / a, r2 = c / q;
-          roots = r1 < r2 ? [r1, r2] : [r2, r1];
-        } else if (d === 0) {
-          roots = [rb];
-        } else {
-          if (complex) {
-            d = Math.sqrt(-d) / (2 * Math.abs(a));
-            return [
-              { r: rb, i: -d },
-              { r: rb, i: d }
-            ];
-          }
-          return [];
+  // src/constants.js
+  var EULER_GAMMA = 0.5772156649015329;
+
+  // src/quadratic.js
+  function quadratic(a2, b2, c2, { complex = false } = {}) {
+    if (!Number.isFinite(a2) || !Number.isFinite(b2) || !Number.isFinite(c2)) {
+      throw new TypeError("Coefficients must be finite numbers.");
+    }
+    const real = (roots) => complex ? roots.map((re) => ({ re, im: 0 })) : roots;
+    if (a2 === 0) {
+      return real(b2 === 0 ? [] : [-c2 / b2]);
+    }
+    const d2 = b2 * b2 - 4 * a2 * c2, rb = -b2 / (2 * a2);
+    if (d2 > 0) {
+      const q = -(b2 + (b2 < 0 ? -1 : 1) * Math.sqrt(d2)) / 2, r1 = q / a2, r2 = c2 / q;
+      return real(r1 < r2 ? [r1, r2] : [r2, r1]);
+    }
+    if (d2 === 0) return real([rb]);
+    if (!complex) return [];
+    const im = Math.sqrt(-d2) / (2 * Math.abs(a2));
+    return [{ re: rb, im: -im }, { re: rb, im }];
+  }
+
+  // src/validate.js
+  function requireArray(values, name) {
+    if (values == null || typeof values !== "object" || typeof values.length !== "number") {
+      throw new TypeError(`${name} must be an array.`);
+    }
+  }
+  function requireFiniteNumbers(values, name) {
+    requireArray(values, name);
+    for (let i = 0; i < values.length; i++) {
+      if (!Number.isFinite(values[i])) throw new TypeError(`${name} must contain only finite numbers.`);
+    }
+  }
+  function requireFunction(f, name) {
+    if (typeof f !== "function") throw new TypeError(`${name} must be a function.`);
+  }
+  function requireSameLength(a2, b2) {
+    if (a2.length !== b2.length) throw new RangeError("Arrays must have the same length.");
+  }
+  function requireMatrix(m, name) {
+    requireArray(m, name);
+    if (!m.length) throw new RangeError(`${name} must have at least one row.`);
+    const columns = m[0] == null ? void 0 : m[0].length;
+    for (let i = 0; i < m.length; i++) {
+      requireFiniteNumbers(m[i], `Each row of ${name}`);
+      if (m[i].length !== columns) throw new RangeError(`All rows of ${name} must have the same length.`);
+    }
+    if (!columns) throw new RangeError(`${name} must have at least one column.`);
+    return [m.length, columns];
+  }
+  function requireSquareMatrix(m, name) {
+    const [rows, columns] = requireMatrix(m, name);
+    if (rows !== columns) throw new RangeError(`${name} must be square.`);
+    return rows;
+  }
+
+  // src/linalg/vector.js
+  function dot(a2, b2) {
+    requireFiniteNumbers(a2, "a");
+    requireFiniteNumbers(b2, "b");
+    requireSameLength(a2, b2);
+    let s = 0;
+    for (let i = 0; i < a2.length; i++) s += a2[i] * b2[i];
+    return s;
+  }
+  function cross(a2, b2) {
+    requireFiniteNumbers(a2, "a");
+    requireFiniteNumbers(b2, "b");
+    if (a2.length !== 3 || b2.length !== 3) throw new RangeError("The cross product needs two vectors of length 3.");
+    return [
+      a2[1] * b2[2] - a2[2] * b2[1],
+      a2[2] * b2[0] - a2[0] * b2[2],
+      a2[0] * b2[1] - a2[1] * b2[0]
+    ];
+  }
+  function norm(a2) {
+    requireFiniteNumbers(a2, "a");
+    let max = 0;
+    for (let i = 0; i < a2.length; i++) max = Math.max(max, Math.abs(a2[i]));
+    if (max === 0) return 0;
+    let s = 0;
+    for (let i = 0; i < a2.length; i++) {
+      const x = a2[i] / max;
+      s += x * x;
+    }
+    return max * Math.sqrt(s);
+  }
+  function normalize(a2) {
+    const length = norm(a2);
+    if (length === 0) throw new RangeError("A zero vector cannot be normalised.");
+    return Array.from(a2, (x) => x / length);
+  }
+
+  // src/linalg/matrix.js
+  function transpose(a2) {
+    const [rows, columns] = requireMatrix(a2, "a");
+    return Array.from({ length: columns }, (_, j) => Array.from({ length: rows }, (_2, i) => a2[i][j]));
+  }
+  function multiply(a2, b2) {
+    const [rows, inner] = requireMatrix(a2, "a");
+    requireArray(b2, "b");
+    if (b2.length && typeof b2[0] === "number") {
+      requireFiniteNumbers(b2, "b");
+      if (b2.length !== inner) throw new RangeError(`Cannot multiply a ${rows}\xD7${inner} matrix by a vector of length ${b2.length}.`);
+      return Array.from({ length: rows }, (_, i) => {
+        let s = 0;
+        for (let k = 0; k < inner; k++) s += a2[i][k] * b2[k];
+        return s;
+      });
+    }
+    const [bRows, columns] = requireMatrix(b2, "b");
+    if (bRows !== inner) throw new RangeError(`Cannot multiply a ${rows}\xD7${inner} matrix by a ${bRows}\xD7${columns} matrix.`);
+    return Array.from({ length: rows }, (_, i) => Array.from({ length: columns }, (_2, j) => {
+      let s = 0;
+      for (let k = 0; k < inner; k++) s += a2[i][k] * b2[k][j];
+      return s;
+    }));
+  }
+  function lu(a2) {
+    const n = a2.length, m = a2.map((row) => Array.from(row)), permutation = Array.from({ length: n }, (_, i) => i);
+    let sign = 1, max = 0;
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) max = Math.max(max, Math.abs(m[i][j]));
+    for (let k = 0; k < n; k++) {
+      let p = k;
+      for (let i = k + 1; i < n; i++) if (Math.abs(m[i][k]) > Math.abs(m[p][k])) p = i;
+      if (p !== k) {
+        [m[p], m[k]] = [m[k], m[p]];
+        [permutation[p], permutation[k]] = [permutation[k], permutation[p]];
+        sign = -sign;
+      }
+      if (m[k][k] === 0) continue;
+      for (let i = k + 1; i < n; i++) {
+        const f = m[i][k] /= m[k][k];
+        for (let j = k + 1; j < n; j++) m[i][j] -= f * m[k][j];
+      }
+    }
+    return { m, permutation, sign, max };
+  }
+  function determinant(a2) {
+    const n = requireSquareMatrix(a2, "a"), { m, sign } = lu(a2);
+    let d2 = sign;
+    for (let i = 0; i < n; i++) d2 *= m[i][i];
+    return d2;
+  }
+  function solve(a2, b2) {
+    const n = requireSquareMatrix(a2, "a");
+    requireArray(b2, "b");
+    const vector = !b2.length || typeof b2[0] === "number", columns = vector ? 1 : requireMatrix(b2, "b")[1];
+    if (vector) requireFiniteNumbers(b2, "b");
+    if (b2.length !== n) throw new RangeError(`b must have ${n} rows.`);
+    const { m, permutation, max } = lu(a2), tolerance = n * Number.EPSILON * max;
+    for (let i = 0; i < n; i++) {
+      if (!(Math.abs(m[i][i]) > tolerance)) throw new RangeError("Matrix is singular.");
+    }
+    const x = Array.from({ length: n }, (_, i) => vector ? [b2[permutation[i]]] : Array.from(b2[permutation[i]]));
+    for (let c2 = 0; c2 < columns; c2++) {
+      for (let i = 0; i < n; i++) for (let k = 0; k < i; k++) x[i][c2] -= m[i][k] * x[k][c2];
+      for (let i = n - 1; i >= 0; i--) {
+        for (let k = i + 1; k < n; k++) x[i][c2] -= m[i][k] * x[k][c2];
+        x[i][c2] /= m[i][i];
+      }
+    }
+    return vector ? x.map((row) => row[0]) : x;
+  }
+  function inverse(a2) {
+    const n = requireSquareMatrix(a2, "a");
+    return solve(a2, Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_2, j) => +(i === j))));
+  }
+
+  // src/linalg/tridiagonal.js
+  function solveTridiagonal(lower, diagonal, upper, rhs) {
+    requireFiniteNumbers(lower, "lower");
+    requireFiniteNumbers(diagonal, "diagonal");
+    requireFiniteNumbers(upper, "upper");
+    requireFiniteNumbers(rhs, "rhs");
+    const n = diagonal.length;
+    if (!n) throw new RangeError("diagonal must not be empty.");
+    if (rhs.length !== n || lower.length !== n - 1 || upper.length !== n - 1) {
+      throw new RangeError("diagonal and rhs must have the same length, and lower and upper one fewer.");
+    }
+    const c2 = new Array(n), d2 = new Array(n);
+    let b2 = diagonal[0];
+    if (b2 === 0) throw new RangeError("Zero pivot; the system needs pivoting.");
+    c2[0] = n > 1 ? upper[0] / b2 : 0;
+    d2[0] = rhs[0] / b2;
+    for (let i = 1; i < n; i++) {
+      b2 = diagonal[i] - lower[i - 1] * c2[i - 1];
+      if (b2 === 0) throw new RangeError("Zero pivot; the system needs pivoting.");
+      c2[i] = i < n - 1 ? upper[i] / b2 : 0;
+      d2[i] = (rhs[i] - lower[i - 1] * d2[i - 1]) / b2;
+    }
+    const x = new Array(n);
+    x[n - 1] = d2[n - 1];
+    for (let i = n - 2; i >= 0; i--) x[i] = d2[i] - c2[i] * x[i + 1];
+    return x;
+  }
+
+  // src/linalg/eigen.js
+  function eigen(a2) {
+    const n = requireSquareMatrix(a2, "a"), V = Array.from({ length: n }, () => new Array(n).fill(0)), d2 = new Array(n).fill(0), e = new Array(n).fill(0);
+    let symmetric = true;
+    for (let i = 0; i < n && symmetric; i++) {
+      for (let j = 0; j < i; j++) {
+        if (a2[i][j] !== a2[j][i]) {
+          symmetric = false;
+          break;
         }
       }
-      return complex ? roots.map(function(r) {
-        return { r, i: 0 };
-      }) : roots;
     }
-    quadratic.complex = function(x) {
-      if (!arguments.length) return complex;
-      complex = x;
-      return quadratic;
-    };
-    return quadratic;
-  };
-
-  // src/core/zeroes.js
-  science.zeroes = function(n) {
-    var i = -1, a = [];
-    if (arguments.length === 1)
-      while (++i < n)
-        a[i] = 0;
-    else
-      while (++i < n)
-        a[i] = science.zeroes.apply(
-          this,
-          Array.prototype.slice.call(arguments, 1)
-        );
-    return a;
-  };
-
-  // src/lin/lin.js
-  science.lin = {};
-
-  // src/lin/decompose.js
-  science.lin.decompose = function() {
-    function decompose(A) {
-      var n = A.length, V = [], d = [], e = [];
-      for (var i = 0; i < n; i++) {
-        V[i] = [];
-        d[i] = [];
-        e[i] = [];
-      }
-      var symmetric = true;
-      for (var j = 0; j < n; j++) {
-        for (var i = 0; i < n; i++) {
-          if (A[i][j] !== A[j][i]) {
-            symmetric = false;
-            break;
-          }
-        }
-      }
-      if (symmetric) {
-        for (var i = 0; i < n; i++) V[i] = A[i].slice();
-        science_lin_decomposeTred2(d, e, V);
-        science_lin_decomposeTql2(d, e, V);
-      } else {
-        var H = [];
-        for (var i = 0; i < n; i++) H[i] = A[i].slice();
-        science_lin_decomposeOrthes(H, V);
-        science_lin_decomposeHqr2(d, e, H, V);
-      }
-      var D = [];
-      for (var i = 0; i < n; i++) {
-        var row = D[i] = [];
-        for (var j = 0; j < n; j++) row[j] = i === j ? d[i] : 0;
-        D[i][e[i] > 0 ? i + 1 : i - 1] = e[i];
-      }
-      return { D, V };
+    if (symmetric) {
+      for (let i = 0; i < n; i++) V[i] = Array.from(a2[i]);
+      tred2(d2, e, V);
+      tql2(d2, e, V);
+      e.fill(0);
+    } else {
+      const H = a2.map((row) => Array.from(row));
+      orthes(H, V);
+      hqr2(d2, e, H, V);
     }
-    return decompose;
-  };
-  function science_lin_decomposeTred2(d, e, V) {
+    return { values: d2, imaginary: e, vectors: V };
+  }
+  function tred2(d2, e, V) {
     var n = V.length;
-    for (var j = 0; j < n; j++) d[j] = V[n - 1][j];
+    for (var j = 0; j < n; j++) d2[j] = V[n - 1][j];
     for (var i = n - 1; i > 0; i--) {
       var scale = 0, h = 0;
-      for (var k = 0; k < i; k++) scale += Math.abs(d[k]);
+      for (var k = 0; k < i; k++) scale += Math.abs(d2[k]);
       if (scale === 0) {
-        e[i] = d[i - 1];
+        e[i] = d2[i - 1];
         for (var j = 0; j < i; j++) {
-          d[j] = V[i - 1][j];
+          d2[j] = V[i - 1][j];
           V[i][j] = 0;
           V[j][i] = 0;
         }
       } else {
         for (var k = 0; k < i; k++) {
-          d[k] /= scale;
-          h += d[k] * d[k];
+          d2[k] /= scale;
+          h += d2[k] * d2[k];
         }
-        var f = d[i - 1];
+        var f = d2[i - 1];
         var g = Math.sqrt(h);
         if (f > 0) g = -g;
         e[i] = scale * g;
         h = h - f * g;
-        d[i - 1] = f - g;
+        d2[i - 1] = f - g;
         for (var j = 0; j < i; j++) e[j] = 0;
         for (var j = 0; j < i; j++) {
-          f = d[j];
+          f = d2[j];
           V[j][i] = f;
           g = e[j] + V[j][j] * f;
           for (var k = j + 1; k <= i - 1; k++) {
-            g += V[k][j] * d[k];
+            g += V[k][j] * d2[k];
             e[k] += V[k][j] * f;
           }
           e[j] = g;
@@ -159,42 +318,42 @@ var science;
         f = 0;
         for (var j = 0; j < i; j++) {
           e[j] /= h;
-          f += e[j] * d[j];
+          f += e[j] * d2[j];
         }
         var hh = f / (h + h);
-        for (var j = 0; j < i; j++) e[j] -= hh * d[j];
+        for (var j = 0; j < i; j++) e[j] -= hh * d2[j];
         for (var j = 0; j < i; j++) {
-          f = d[j];
+          f = d2[j];
           g = e[j];
-          for (var k = j; k <= i - 1; k++) V[k][j] -= f * e[k] + g * d[k];
-          d[j] = V[i - 1][j];
+          for (var k = j; k <= i - 1; k++) V[k][j] -= f * e[k] + g * d2[k];
+          d2[j] = V[i - 1][j];
           V[i][j] = 0;
         }
       }
-      d[i] = h;
+      d2[i] = h;
     }
     for (var i = 0; i < n - 1; i++) {
       V[n - 1][i] = V[i][i];
       V[i][i] = 1;
-      var h = d[i + 1];
+      var h = d2[i + 1];
       if (h != 0) {
-        for (var k = 0; k <= i; k++) d[k] = V[k][i + 1] / h;
+        for (var k = 0; k <= i; k++) d2[k] = V[k][i + 1] / h;
         for (var j = 0; j <= i; j++) {
           var g = 0;
           for (var k = 0; k <= i; k++) g += V[k][i + 1] * V[k][j];
-          for (var k = 0; k <= i; k++) V[k][j] -= g * d[k];
+          for (var k = 0; k <= i; k++) V[k][j] -= g * d2[k];
         }
       }
       for (var k = 0; k <= i; k++) V[k][i + 1] = 0;
     }
     for (var j = 0; j < n; j++) {
-      d[j] = V[n - 1][j];
+      d2[j] = V[n - 1][j];
       V[n - 1][j] = 0;
     }
     V[n - 1][n - 1] = 1;
     e[0] = 0;
   }
-  function science_lin_decomposeTql2(d, e, V) {
+  function tql2(d2, e, V) {
     var n = V.length;
     for (var i = 1; i < n; i++) e[i - 1] = e[i];
     e[n - 1] = 0;
@@ -202,7 +361,7 @@ var science;
     var tst1 = 0;
     var eps = 1e-12;
     for (var l = 0; l < n; l++) {
-      tst1 = Math.max(tst1, Math.abs(d[l]) + Math.abs(e[l]));
+      tst1 = Math.max(tst1, Math.abs(d2[l]) + Math.abs(e[l]));
       var m = l;
       while (m < n) {
         if (Math.abs(e[m]) <= eps * tst1) {
@@ -214,61 +373,61 @@ var science;
         var iter = 0;
         do {
           iter++;
-          var g = d[l];
-          var p = (d[l + 1] - g) / (2 * e[l]);
-          var r = science.hypot(p, 1);
+          var g = d2[l];
+          var p = (d2[l + 1] - g) / (2 * e[l]);
+          var r = Math.hypot(p, 1);
           if (p < 0) r = -r;
-          d[l] = e[l] / (p + r);
-          d[l + 1] = e[l] * (p + r);
-          var dl1 = d[l + 1];
-          var h = g - d[l];
-          for (var i = l + 2; i < n; i++) d[i] -= h;
+          d2[l] = e[l] / (p + r);
+          d2[l + 1] = e[l] * (p + r);
+          var dl1 = d2[l + 1];
+          var h = g - d2[l];
+          for (var i = l + 2; i < n; i++) d2[i] -= h;
           f += h;
-          p = d[m];
-          var c = 1;
-          var c2 = c;
-          var c3 = c;
+          p = d2[m];
+          var c2 = 1;
+          var c22 = c2;
+          var c3 = c2;
           var el1 = e[l + 1];
           var s = 0;
           var s2 = 0;
           for (var i = m - 1; i >= l; i--) {
-            c3 = c2;
-            c2 = c;
+            c3 = c22;
+            c22 = c2;
             s2 = s;
-            g = c * e[i];
-            h = c * p;
-            r = science.hypot(p, e[i]);
+            g = c2 * e[i];
+            h = c2 * p;
+            r = Math.hypot(p, e[i]);
             e[i + 1] = s * r;
             s = e[i] / r;
-            c = p / r;
-            p = c * d[i] - s * g;
-            d[i + 1] = h + s * (c * g + s * d[i]);
+            c2 = p / r;
+            p = c2 * d2[i] - s * g;
+            d2[i + 1] = h + s * (c2 * g + s * d2[i]);
             for (var k = 0; k < n; k++) {
               h = V[k][i + 1];
-              V[k][i + 1] = s * V[k][i] + c * h;
-              V[k][i] = c * V[k][i] - s * h;
+              V[k][i + 1] = s * V[k][i] + c2 * h;
+              V[k][i] = c2 * V[k][i] - s * h;
             }
           }
           p = -s * s2 * c3 * el1 * e[l] / dl1;
           e[l] = s * p;
-          d[l] = c * p;
+          d2[l] = c2 * p;
         } while (Math.abs(e[l]) > eps * tst1);
       }
-      d[l] = d[l] + f;
+      d2[l] = d2[l] + f;
       e[l] = 0;
     }
     for (var i = 0; i < n - 1; i++) {
       var k = i;
-      var p = d[i];
+      var p = d2[i];
       for (var j = i + 1; j < n; j++) {
-        if (d[j] < p) {
+        if (d2[j] < p) {
           k = j;
-          p = d[j];
+          p = d2[j];
         }
       }
       if (k != i) {
-        d[k] = d[i];
-        d[i] = p;
+        d2[k] = d2[i];
+        d2[i] = p;
         for (var j = 0; j < n; j++) {
           p = V[j][i];
           V[j][i] = V[j][k];
@@ -277,7 +436,7 @@ var science;
       }
     }
   }
-  function science_lin_decomposeOrthes(H, V) {
+  function orthes(H, V) {
     var n = H.length;
     var ort = [];
     var low = 0;
@@ -326,28 +485,28 @@ var science;
       }
     }
   }
-  function science_lin_decomposeHqr2(d, e, H, V) {
+  function hqr2(d2, e, H, V) {
     var nn = H.length, n = nn - 1, low = 0, high = nn - 1, eps = 1e-12, exshift = 0, p = 0, q = 0, r = 0, s = 0, z = 0, t, w, x, y;
-    var norm = 0;
+    var norm2 = 0;
     for (var i = 0; i < nn; i++) {
       if (i < low || i > high) {
-        d[i] = H[i][i];
+        d2[i] = H[i][i];
         e[i] = 0;
       }
-      for (var j = Math.max(i - 1, 0); j < nn; j++) norm += Math.abs(H[i][j]);
+      for (var j = Math.max(i - 1, 0); j < nn; j++) norm2 += Math.abs(H[i][j]);
     }
     var iter = 0;
     while (n >= low) {
       var l = n;
       while (l > low) {
         s = Math.abs(H[l - 1][l - 1]) + Math.abs(H[l][l]);
-        if (s === 0) s = norm;
+        if (s === 0) s = norm2;
         if (Math.abs(H[l][l - 1]) < eps * s) break;
         l--;
       }
       if (l === n) {
         H[n][n] = H[n][n] + exshift;
-        d[n] = H[n][n];
+        d2[n] = H[n][n];
         e[n] = 0;
         n--;
         iter = 0;
@@ -361,9 +520,9 @@ var science;
         x = H[n][n];
         if (q >= 0) {
           z = p + (p >= 0 ? z : -z);
-          d[n - 1] = x + z;
-          d[n] = d[n - 1];
-          if (z !== 0) d[n] = x - w / z;
+          d2[n - 1] = x + z;
+          d2[n] = d2[n - 1];
+          if (z !== 0) d2[n] = x - w / z;
           e[n - 1] = 0;
           e[n] = 0;
           x = H[n][n - 1];
@@ -389,8 +548,8 @@ var science;
             V[i][n] = q * V[i][n] - p * z;
           }
         } else {
-          d[n - 1] = x + p;
-          d[n] = x + p;
+          d2[n - 1] = x + p;
+          d2[n] = x + p;
           e[n - 1] = z;
           e[n] = -z;
         }
@@ -510,11 +669,11 @@ var science;
         }
       }
     }
-    if (norm == 0) {
+    if (norm2 == 0) {
       return;
     }
     for (n = nn - 1; n >= 0; n--) {
-      p = d[n];
+      p = d2[n];
       q = e[n];
       if (q == 0) {
         var l = n;
@@ -531,11 +690,11 @@ var science;
           } else {
             l = i;
             if (e[i] === 0) {
-              H[i][n] = -r / (w !== 0 ? w : eps * norm);
+              H[i][n] = -r / (w !== 0 ? w : eps * norm2);
             } else {
               x = H[i][i + 1];
               y = H[i + 1][i];
-              q = (d[i] - p) * (d[i] - p) + e[i] * e[i];
+              q = (d2[i] - p) * (d2[i] - p) + e[i] * e[i];
               t = (x * s - z * r) / q;
               H[i][n] = t;
               if (Math.abs(x) > Math.abs(z)) {
@@ -556,7 +715,7 @@ var science;
           H[n - 1][n - 1] = q / H[n][n - 1];
           H[n - 1][n] = -(H[n][n] - p) / H[n][n - 1];
         } else {
-          var zz = science_lin_decomposeCdiv(0, -H[n - 1][n], H[n - 1][n - 1] - p, q);
+          var zz = cdiv(0, -H[n - 1][n], H[n - 1][n - 1] - p, q);
           H[n - 1][n - 1] = zz[0];
           H[n - 1][n] = zz[1];
         }
@@ -576,25 +735,25 @@ var science;
           } else {
             l = i;
             if (e[i] == 0) {
-              var zz = science_lin_decomposeCdiv(-ra, -sa, w, q);
+              var zz = cdiv(-ra, -sa, w, q);
               H[i][n - 1] = zz[0];
               H[i][n] = zz[1];
             } else {
               x = H[i][i + 1];
               y = H[i + 1][i];
-              vr = (d[i] - p) * (d[i] - p) + e[i] * e[i] - q * q;
-              vi = (d[i] - p) * 2 * q;
+              vr = (d2[i] - p) * (d2[i] - p) + e[i] * e[i] - q * q;
+              vi = (d2[i] - p) * 2 * q;
               if (vr == 0 & vi == 0) {
-                vr = eps * norm * (Math.abs(w) + Math.abs(q) + Math.abs(x) + Math.abs(y) + Math.abs(z));
+                vr = eps * norm2 * (Math.abs(w) + Math.abs(q) + Math.abs(x) + Math.abs(y) + Math.abs(z));
               }
-              var zz = science_lin_decomposeCdiv(x * r - z * ra + q * sa, x * s - z * sa - q * ra, vr, vi);
+              var zz = cdiv(x * r - z * ra + q * sa, x * s - z * sa - q * ra, vr, vi);
               H[i][n - 1] = zz[0];
               H[i][n] = zz[1];
               if (Math.abs(x) > Math.abs(z) + Math.abs(q)) {
                 H[i + 1][n - 1] = (-ra - w * H[i][n - 1] + q * H[i][n]) / x;
                 H[i + 1][n] = (-sa - w * H[i][n] - q * H[i][n - 1]) / x;
               } else {
-                var zz = science_lin_decomposeCdiv(-r - y * H[i][n - 1], -s - y * H[i][n], z, q);
+                var zz = cdiv(-r - y * H[i][n - 1], -s - y * H[i][n], z, q);
                 H[i + 1][n - 1] = zz[0];
                 H[i + 1][n] = zz[1];
               }
@@ -623,765 +782,541 @@ var science;
       }
     }
   }
-  function science_lin_decomposeCdiv(xr, xi, yr, yi) {
+  function cdiv(xr, xi, yr, yi) {
     if (Math.abs(yr) > Math.abs(yi)) {
-      var r = yi / yr, d = yr + r * yi;
-      return [(xr + r * xi) / d, (xi - r * xr) / d];
+      var r = yi / yr, d2 = yr + r * yi;
+      return [(xr + r * xi) / d2, (xi - r * xr) / d2];
     } else {
-      var r = yr / yi, d = yi + r * yr;
-      return [(r * xr + xi) / d, (r * xi - xr) / d];
+      var r = yr / yi, d2 = yi + r * yr;
+      return [(r * xr + xi) / d2, (r * xi - xr) / d2];
     }
   }
 
-  // src/lin/cross.js
-  science.lin.cross = function(a, b) {
-    return [
-      a[1] * b[2] - a[2] * b[1],
-      a[2] * b[0] - a[0] * b[2],
-      a[0] * b[1] - a[1] * b[0]
-    ];
-  };
-
-  // src/lin/dot.js
-  science.lin.dot = function(a, b) {
-    var s = 0, i = -1, n = Math.min(a.length, b.length);
-    while (++i < n) s += a[i] * b[i];
-    return s;
-  };
-
-  // src/lin/length.js
-  science.lin.length = function(p) {
-    return Math.sqrt(science.lin.dot(p, p));
-  };
-
-  // src/lin/normalize.js
-  science.lin.normalize = function(p) {
-    var length = science.lin.length(p);
-    return p.map(function(d) {
-      return d / length;
-    });
-  };
-
-  // src/lin/determinant.js
-  science.lin.determinant = function(matrix) {
-    var m = matrix[0].concat(matrix[1]).concat(matrix[2]).concat(matrix[3]);
-    return m[12] * m[9] * m[6] * m[3] - m[8] * m[13] * m[6] * m[3] - m[12] * m[5] * m[10] * m[3] + m[4] * m[13] * m[10] * m[3] + m[8] * m[5] * m[14] * m[3] - m[4] * m[9] * m[14] * m[3] - m[12] * m[9] * m[2] * m[7] + m[8] * m[13] * m[2] * m[7] + m[12] * m[1] * m[10] * m[7] - m[0] * m[13] * m[10] * m[7] - m[8] * m[1] * m[14] * m[7] + m[0] * m[9] * m[14] * m[7] + m[12] * m[5] * m[2] * m[11] - m[4] * m[13] * m[2] * m[11] - m[12] * m[1] * m[6] * m[11] + m[0] * m[13] * m[6] * m[11] + m[4] * m[1] * m[14] * m[11] - m[0] * m[5] * m[14] * m[11] - m[8] * m[5] * m[2] * m[15] + m[4] * m[9] * m[2] * m[15] + m[8] * m[1] * m[6] * m[15] - m[0] * m[9] * m[6] * m[15] - m[4] * m[1] * m[10] * m[15] + m[0] * m[5] * m[10] * m[15];
-  };
-
-  // src/lin/gaussjordan.js
-  science.lin.gaussjordan = function(m, eps) {
-    var h = m.length, w = m[0].length, y = -1, y2, x;
-    if (!eps) {
-      var max = 0;
-      while (++y < h) {
-        x = -1;
-        while (++x < h) max = Math.max(max, Math.abs(m[y][x]));
-      }
-      eps = h * Number.EPSILON * max;
-      y = -1;
-    }
-    while (++y < h) {
-      var maxrow = y;
-      y2 = y;
-      while (++y2 < h) {
-        if (Math.abs(m[y2][y]) > Math.abs(m[maxrow][y]))
-          maxrow = y2;
-      }
-      var tmp = m[y];
-      m[y] = m[maxrow];
-      m[maxrow] = tmp;
-      if (Math.abs(m[y][y]) <= eps) return false;
-      y2 = y;
-      while (++y2 < h) {
-        var c = m[y2][y] / m[y][y];
-        x = y - 1;
-        while (++x < w) {
-          m[y2][x] -= m[y][x] * c;
-        }
-      }
-    }
-    y = h;
-    while (--y >= 0) {
-      var c = m[y][y];
-      y2 = -1;
-      while (++y2 < y) {
-        x = w;
-        while (--x >= y) {
-          m[y2][x] -= m[y][x] * m[y2][y] / c;
-        }
-      }
-      m[y][y] /= c;
-      x = h - 1;
-      while (++x < w) {
-        m[y][x] /= c;
-      }
-    }
-    return true;
-  };
-
-  // src/lin/inverse.js
-  science.lin.inverse = function(m) {
-    var n = m.length, i = -1;
-    if (n !== m[0].length) return;
-    m = m.map(function(row, i2) {
-      var identity = new Array(n), j = -1;
-      while (++j < n) identity[j] = i2 === j ? 1 : 0;
-      return row.concat(identity);
-    });
-    if (!science.lin.gaussjordan(m)) return;
-    while (++i < n) {
-      m[i] = m[i].slice(n);
-    }
+  // src/stats/summary.js
+  function mean(values) {
+    requireArray(values, "values");
+    const n = values.length;
+    if (n === 0) return NaN;
+    let m = 0;
+    for (let i = 0; i < n; i++) m += (values[i] - m) / (i + 1);
     return m;
-  };
+  }
+  function variance(values) {
+    requireArray(values, "values");
+    const n = values.length;
+    if (n < 2) return NaN;
+    let m = 0, s = 0;
+    for (let i = 0; i < n; i++) {
+      const d2 = values[i] - m;
+      m += d2 / (i + 1);
+      s += d2 * (values[i] - m);
+    }
+    return s / (n - 1);
+  }
+  function standardDeviation(values) {
+    return Math.sqrt(variance(values));
+  }
+  function sorted(values) {
+    requireArray(values, "values");
+    return Array.from(values).sort((a2, b2) => a2 - b2);
+  }
+  function requireProbability(p) {
+    if (!(p >= 0 && p <= 1)) throw new RangeError("Probabilities must be between 0 and 1.");
+  }
+  function quantileSorted(s, p) {
+    const n = s.length;
+    if (n === 0) return NaN;
+    const index = p * (n - 1), lo = Math.floor(index), h = index - lo;
+    return h === 0 ? s[lo] : s[lo] + h * (s[lo + 1] - s[lo]);
+  }
+  function quantile(values, p) {
+    requireProbability(p);
+    return quantileSorted(sorted(values), p);
+  }
+  function quantiles(values, probabilities) {
+    requireArray(probabilities, "probabilities");
+    for (let i = 0; i < probabilities.length; i++) requireProbability(probabilities[i]);
+    const s = sorted(values);
+    return Array.from(probabilities, (p) => quantileSorted(s, p));
+  }
+  function median(values) {
+    return quantile(values, 0.5);
+  }
+  function iqr(values) {
+    const [q1, q3] = quantiles(values, [0.25, 0.75]);
+    return q3 - q1;
+  }
+  function modes(values) {
+    requireArray(values, "values");
+    const counts = /* @__PURE__ */ new Map();
+    let max = 0;
+    for (let i = 0; i < values.length; i++) {
+      const count = (counts.get(values[i]) || 0) + 1;
+      counts.set(values[i], count);
+      if (count > max) max = count;
+    }
+    const result = [];
+    for (const [value, count] of counts) if (count === max) result.push(value);
+    return result;
+  }
 
-  // src/lin/multiply.js
-  science.lin.multiply = function(a, b) {
-    var m = a.length, n = b[0].length, p = b.length, i = -1, j, k;
-    if (p !== a[0].length) throw { "error": "columns(a) != rows(b); " + a[0].length + " != " + p };
-    var ab = new Array(m);
-    while (++i < m) {
-      ab[i] = new Array(n);
-      j = -1;
-      while (++j < n) {
-        var s = 0;
-        k = -1;
-        while (++k < p) s += a[i][k] * b[k][j];
-        ab[i][j] = s;
+  // src/stats/erf.js
+  var TWO_OVER_SQRT_PI = 2 / Math.sqrt(Math.PI);
+  var ONE_OVER_SQRT_PI = 1 / Math.sqrt(Math.PI);
+  var ERF_SERIES_LIMIT = 2;
+  var ERFC_FRACTION_LIMIT = 1;
+  function erf(x) {
+    if (Number.isNaN(x) || x === 0) return x;
+    const a2 = Math.abs(x), y = a2 < ERF_SERIES_LIMIT ? erfSeries(a2) : 1 - erfcContinuedFraction(a2);
+    return x < 0 ? -y : y;
+  }
+  function erfc(x) {
+    if (Number.isNaN(x)) return NaN;
+    return x < ERFC_FRACTION_LIMIT ? 1 - erf(x) : erfcContinuedFraction(x);
+  }
+  function erfSeries(x) {
+    const x2 = 2 * x * x;
+    let term = x, sum = x;
+    for (let n = 1; term > sum * 1e-17; n++) {
+      term *= x2 / (2 * n + 1);
+      sum += term;
+    }
+    return TWO_OVER_SQRT_PI * Math.exp(-x * x) * sum;
+  }
+  function erfcContinuedFraction(x) {
+    if (x === Infinity) return 0;
+    const tiny = 1e-300;
+    let f = x, c2 = x, d2 = 0;
+    for (let k = 1; k < 1e3; k++) {
+      const a2 = k / 2;
+      d2 = x + a2 * d2;
+      if (d2 === 0) d2 = tiny;
+      c2 = x + a2 / c2;
+      if (c2 === 0) c2 = tiny;
+      d2 = 1 / d2;
+      const delta = c2 * d2;
+      f *= delta;
+      if (Math.abs(delta - 1) < 1e-16) break;
+    }
+    const xh = Math.round(x * 16) / 16;
+    return ONE_OVER_SQRT_PI * Math.exp(-xh * xh) * Math.exp(-(x - xh) * (x + xh)) / f;
+  }
+
+  // src/stats/normal.js
+  var SQRT_2PI = Math.sqrt(2 * Math.PI);
+  function normal({ mean: mean2 = 0, sd = 1 } = {}) {
+    if (!Number.isFinite(mean2)) throw new TypeError("mean must be a finite number.");
+    if (!(sd > 0 && sd < Infinity)) throw new RangeError("sd must be a positive finite number.");
+    return Object.freeze({
+      mean: mean2,
+      sd,
+      pdf(x) {
+        const z = (x - mean2) / sd;
+        return Math.exp(-0.5 * z * z) / (sd * SQRT_2PI);
+      },
+      cdf(x) {
+        return standardCdf((x - mean2) / sd);
+      },
+      quantile(p) {
+        if (!(p >= 0 && p <= 1)) throw new RangeError("Probabilities must be between 0 and 1.");
+        return mean2 + sd * standardQuantile(p);
+      },
+      sample(random = Math.random) {
+        requireFunction(random, "random");
+        return mean2 + sd * standardSample(random);
       }
+    });
+  }
+  function standardCdf(z) {
+    return 0.5 * erfc(-z / Math.SQRT2);
+  }
+  var a = [-39.69683028665376, 220.9460984245205, -275.9285104469687, 138.357751867269, -30.66479806614716, 2.506628277459239];
+  var b = [-54.47609879822406, 161.5858368580409, -155.6989798598866, 66.80131188771972, -13.28068155288572];
+  var c = [-0.007784894002430293, -0.3223964580411365, -2.400758277161838, -2.549732539343734, 4.374664141464968, 2.938163982698783];
+  var d = [0.007784695709041462, 0.3224671290700398, 2.445134137142996, 3.754408661907416];
+  var pLow = 0.02425;
+  function standardQuantile(p) {
+    if (p === 0) return -Infinity;
+    if (p === 1) return Infinity;
+    let x;
+    if (p < pLow) {
+      const q = Math.sqrt(-2 * Math.log(p));
+      x = (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+    } else if (p <= 1 - pLow) {
+      const q = p - 0.5, r = q * q;
+      x = (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+    } else {
+      const q = Math.sqrt(-2 * Math.log(1 - p));
+      x = -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
     }
-    return ab;
-  };
+    const e = x < 0 ? standardCdf(x) - p : 1 - p - standardCdf(-x), u = e * SQRT_2PI * Math.exp(x * x / 2);
+    return x - u / (1 + x * u / 2);
+  }
+  function standardSample(random) {
+    let x, y, s;
+    do {
+      x = 2 * random() - 1;
+      y = 2 * random() - 1;
+      s = x * x + y * y;
+    } while (s >= 1 || s === 0);
+    return x * Math.sqrt(-2 * Math.log(s) / s);
+  }
 
-  // src/lin/transpose.js
-  science.lin.transpose = function(a) {
-    var m = a.length, n = a[0].length, i = -1, j, b = new Array(n);
-    while (++i < n) {
-      b[i] = new Array(m);
-      j = -1;
-      while (++j < m) b[i][j] = a[j][i];
-    }
-    return b;
-  };
-
-  // src/lin/tridag.js
-  science.lin.tridag = function(a, b, c, d, x, n) {
-    var i, m;
-    for (i = 1; i < n; i++) {
-      m = a[i] / b[i - 1];
-      b[i] -= m * c[i - 1];
-      d[i] -= m * d[i - 1];
-    }
-    x[n - 1] = d[n - 1] / b[n - 1];
-    for (i = n - 2; i >= 0; i--) {
-      x[i] = (d[i] - c[i] * x[i + 1]) / b[i];
-    }
-  };
-
-  // src/stats/stats.js
-  science.stats = {};
-
-  // src/stats/bandwidth.js
-  science.stats.bandwidth = {
-    // Silverman, B. W. (1986) Density Estimation. London: Chapman and Hall.
-    nrd0: function(x) {
-      var hi = Math.sqrt(science.stats.variance(x)), lo = Math.min(hi, science.stats.iqr(x) / 1.34);
-      if (!lo)
-        (lo = hi) || (lo = Math.abs(x[0])) || (lo = 1);
-      return 0.9 * lo * Math.pow(x.length, -0.2);
-    },
-    // Scott, D. W. (1992) Multivariate Density Estimation: Theory, Practice, and
-    // Visualization. Wiley.
-    nrd: function(x) {
-      var h = science.stats.iqr(x) / 1.34;
-      return 1.06 * Math.min(Math.sqrt(science.stats.variance(x)), h) * Math.pow(x.length, -1 / 5);
-    }
-  };
-
-  // src/stats/distance.js
-  science.stats.distance = {
-    euclidean: function(a, b) {
-      var n = a.length, i = -1, s = 0, x;
-      while (++i < n) {
-        x = a[i] - b[i];
+  // src/stats/distances.js
+  function check(a2, b2) {
+    requireArray(a2, "a");
+    requireArray(b2, "b");
+    requireSameLength(a2, b2);
+  }
+  var distances = Object.freeze({
+    euclidean(a2, b2) {
+      check(a2, b2);
+      let s = 0;
+      for (let i = 0; i < a2.length; i++) {
+        const x = a2[i] - b2[i];
         s += x * x;
       }
       return Math.sqrt(s);
     },
-    manhattan: function(a, b) {
-      var n = a.length, i = -1, s = 0;
-      while (++i < n) s += Math.abs(a[i] - b[i]);
+    manhattan(a2, b2) {
+      check(a2, b2);
+      let s = 0;
+      for (let i = 0; i < a2.length; i++) s += Math.abs(a2[i] - b2[i]);
       return s;
     },
-    minkowski: function(p) {
-      return function(a, b) {
-        var n = a.length, i = -1, s = 0;
-        while (++i < n) s += Math.pow(Math.abs(a[i] - b[i]), p);
+    chebyshev(a2, b2) {
+      check(a2, b2);
+      let max = 0;
+      for (let i = 0; i < a2.length; i++) max = Math.max(max, Math.abs(a2[i] - b2[i]));
+      return max;
+    },
+    // Returns the Minkowski distance function of order p.
+    minkowski(p) {
+      if (!(p > 0)) throw new RangeError("p must be positive.");
+      if (p === Infinity) return distances.chebyshev;
+      return function(a2, b2) {
+        check(a2, b2);
+        let s = 0;
+        for (let i = 0; i < a2.length; i++) s += Math.pow(Math.abs(a2[i] - b2[i]), p);
         return Math.pow(s, 1 / p);
       };
     },
-    chebyshev: function(a, b) {
-      var n = a.length, i = -1, max = 0, x;
-      while (++i < n) {
-        x = Math.abs(a[i] - b[i]);
-        if (x > max) max = x;
+    // The number of positions at which a and b differ.
+    hamming(a2, b2) {
+      check(a2, b2);
+      let d2 = 0;
+      for (let i = 0; i < a2.length; i++) if (a2[i] !== b2[i]) d2++;
+      return d2;
+    },
+    // The Jaccard distance between a and b treated as sets, where a truthy value
+    // at position i means that i is a member: 1 - |a ∩ b| / |a ∪ b|. Two empty
+    // sets are at distance 0.
+    jaccard(a2, b2) {
+      check(a2, b2);
+      let intersection = 0, union = 0;
+      for (let i = 0; i < a2.length; i++) {
+        if (a2[i] || b2[i]) union++;
+        if (a2[i] && b2[i]) intersection++;
       }
-      return max;
+      return union ? (union - intersection) / union : 0;
     },
-    hamming: function(a, b) {
-      var n = a.length, i = -1, d = 0;
-      while (++i < n) if (a[i] !== b[i]) d++;
-      return d;
-    },
-    jaccard: function(a, b) {
-      var n = a.length, i = -1, s = 0;
-      while (++i < n) if (a[i] === b[i]) s++;
-      return s / n;
-    },
-    braycurtis: function(a, b) {
-      var n = a.length, i = -1, s0 = 0, s1 = 0, ai, bi;
-      while (++i < n) {
-        ai = a[i];
-        bi = b[i];
-        s0 += Math.abs(ai - bi);
-        s1 += Math.abs(ai + bi);
+    // The Bray–Curtis dissimilarity, for non-negative values.
+    braycurtis(a2, b2) {
+      check(a2, b2);
+      let s0 = 0, s1 = 0;
+      for (let i = 0; i < a2.length; i++) {
+        s0 += Math.abs(a2[i] - b2[i]);
+        s1 += Math.abs(a2[i] + b2[i]);
       }
       return s0 / s1;
     }
-  };
+  });
 
-  // src/stats/erf.js
-  science.stats.erf = function(x) {
-    var a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
-    var sign = x < 0 ? -1 : 1;
-    if (x < 0) {
-      sign = -1;
-      x = -x;
+  // src/stats/kernels.js
+  var kernels = Object.freeze({
+    uniform(u) {
+      return Math.abs(u) <= 1 ? 0.5 : 0;
+    },
+    triangular(u) {
+      return Math.abs(u) <= 1 ? 1 - Math.abs(u) : 0;
+    },
+    epanechnikov(u) {
+      return Math.abs(u) <= 1 ? 0.75 * (1 - u * u) : 0;
+    },
+    quartic(u) {
+      if (Math.abs(u) > 1) return 0;
+      const t = 1 - u * u;
+      return 15 / 16 * t * t;
+    },
+    triweight(u) {
+      if (Math.abs(u) > 1) return 0;
+      const t = 1 - u * u;
+      return 35 / 32 * t * t * t;
+    },
+    gaussian(u) {
+      return Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI);
+    },
+    cosine(u) {
+      return Math.abs(u) <= 1 ? Math.PI / 4 * Math.cos(Math.PI / 2 * u) : 0;
     }
-    var t = 1 / (1 + p * x);
-    return sign * (1 - ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t * Math.exp(-x * x));
-  };
+  });
 
-  // src/stats/phi.js
-  science.stats.phi = function(x) {
-    return 0.5 * (1 + science.stats.erf(x / Math.SQRT2));
-  };
-
-  // src/stats/kernel.js
-  science.stats.kernel = {
-    uniform: function(u) {
-      if (u <= 1 && u >= -1) return 0.5;
-      return 0;
+  // src/stats/bandwidths.js
+  function check2(x) {
+    requireArray(x, "x");
+    if (x.length < 2) throw new RangeError("At least two values are needed to select a bandwidth.");
+  }
+  var bandwidths = Object.freeze({
+    // Silverman's rule of thumb. Silverman, B. W. (1986) Density Estimation.
+    // London: Chapman and Hall.
+    nrd0(x) {
+      check2(x);
+      const hi = standardDeviation(x);
+      let lo = Math.min(hi, iqr(x) / 1.34);
+      if (!lo) lo = hi || Math.abs(x[0]) || 1;
+      return 0.9 * lo * Math.pow(x.length, -0.2);
     },
-    triangular: function(u) {
-      if (u <= 1 && u >= -1) return 1 - Math.abs(u);
-      return 0;
-    },
-    epanechnikov: function(u) {
-      if (u <= 1 && u >= -1) return 0.75 * (1 - u * u);
-      return 0;
-    },
-    quartic: function(u) {
-      if (u <= 1 && u >= -1) {
-        var tmp = 1 - u * u;
-        return 15 / 16 * tmp * tmp;
-      }
-      return 0;
-    },
-    triweight: function(u) {
-      if (u <= 1 && u >= -1) {
-        var tmp = 1 - u * u;
-        return 35 / 32 * tmp * tmp * tmp;
-      }
-      return 0;
-    },
-    gaussian: function(u) {
-      return 1 / Math.sqrt(2 * Math.PI) * Math.exp(-0.5 * u * u);
-    },
-    cosine: function(u) {
-      if (u <= 1 && u >= -1) return Math.PI / 4 * Math.cos(Math.PI / 2 * u);
-      return 0;
+    // Scott's variation of Silverman's rule. Scott, D. W. (1992) Multivariate
+    // Density Estimation: Theory, Practice, and Visualization. Wiley.
+    nrd(x) {
+      check2(x);
+      return 1.06 * Math.min(standardDeviation(x), iqr(x) / 1.34) * Math.pow(x.length, -0.2);
     }
-  };
+  });
 
   // src/stats/kde.js
-  science.stats.kde = function() {
-    var kernel = science.stats.kernel.gaussian, sample = [], bandwidth = science.stats.bandwidth.nrd0;
-    function kde(points, i) {
-      var bw = bandwidth.call(this, sample);
-      if (!(bw > 0)) throw { error: "Bandwidth must be positive." };
-      return points.map(function(x) {
-        var i2 = -1, y = 0, n = sample.length;
-        while (++i2 < n) {
-          y += kernel((x - sample[i2]) / bw);
-        }
-        return [x, y / bw / n];
-      });
+  function kde(sample, { kernel = kernels.gaussian, bandwidth = bandwidths.nrd0 } = {}) {
+    requireFiniteNumbers(sample, "sample");
+    if (!sample.length) throw new RangeError("sample must not be empty.");
+    requireFunction(kernel, "kernel");
+    const values = Array.from(sample), n = values.length, h = typeof bandwidth === "function" ? bandwidth(values) : bandwidth;
+    if (!(h > 0 && h < Infinity)) throw new RangeError("Bandwidth must be a positive finite number.");
+    function density(x) {
+      let y = 0;
+      for (let i = 0; i < n; i++) y += kernel((x - values[i]) / h);
+      return y / (h * n);
     }
-    kde.kernel = function(x) {
-      if (!arguments.length) return kernel;
-      kernel = x;
-      return kde;
-    };
-    kde.sample = function(x) {
-      if (!arguments.length) return sample;
-      sample = x;
-      return kde;
-    };
-    kde.bandwidth = function(x) {
-      if (!arguments.length) return bandwidth;
-      bandwidth = science.functor(x);
-      return kde;
-    };
-    return kde;
-  };
+    density.bandwidth = h;
+    return density;
+  }
 
   // src/stats/kmeans.js
-  science.stats.kmeans = function() {
-    var distance = science.stats.distance.euclidean, maxIterations = 1e3, k = 1;
-    function kmeans(vectors) {
-      var n = vectors.length, assignments = [], clusterSizes = [], repeat = 1, iterations = 0, centroids = science_stats_kmeansRandom(k, vectors), newCentroids, i, j, x, d, min, best;
-      if (!centroids) throw { error: "Not enough distinct vectors for k clusters." };
-      while (repeat && iterations < maxIterations) {
-        j = -1;
-        while (++j < k) {
-          clusterSizes[j] = 0;
-        }
-        i = -1;
-        while (++i < n) {
-          x = vectors[i];
-          min = Infinity;
-          j = -1;
-          while (++j < k) {
-            d = distance.call(this, centroids[j], x);
-            if (d < min) {
-              min = d;
-              best = j;
-            }
-          }
-          clusterSizes[assignments[i] = best]++;
-        }
-        newCentroids = [];
-        i = -1;
-        while (++i < n) {
-          x = assignments[i];
-          d = newCentroids[x];
-          if (d == null) newCentroids[x] = vectors[i].slice();
-          else {
-            j = -1;
-            while (++j < d.length) {
-              d[j] += vectors[i][j];
-            }
+  function kmeans(vectors, { k, distance = distances.euclidean, maxIterations = 1e3, random = Math.random } = {}) {
+    const [n, dimensions] = requireMatrix(vectors, "vectors");
+    if (!(Number.isInteger(k) && k >= 1)) throw new RangeError("k must be a positive integer.");
+    if (!(Number.isInteger(maxIterations) && maxIterations >= 1)) throw new RangeError("maxIterations must be a positive integer.");
+    requireFunction(distance, "distance");
+    requireFunction(random, "random");
+    if (distinctCount(vectors, k) < k) throw new RangeError("There are fewer distinct vectors than clusters.");
+    let centroids = initialCentroids(vectors, k, distance, random), assignments = new Array(n).fill(-1), iterations = 0, changed = true;
+    while (changed && iterations < maxIterations) {
+      iterations++;
+      changed = false;
+      for (let i = 0; i < n; i++) {
+        let best = 0, min = Infinity;
+        for (let j = 0; j < k; j++) {
+          const d2 = distance(vectors[i], centroids[j]);
+          if (d2 < min) {
+            min = d2;
+            best = j;
           }
         }
-        j = -1;
-        while (++j < k) {
-          x = newCentroids[j];
-          d = 1 / clusterSizes[j];
-          i = -1;
-          while (++i < x.length) x[i] *= d;
+        if (assignments[i] !== best) {
+          assignments[i] = best;
+          changed = true;
         }
-        repeat = 0;
-        j = -1;
-        while (++j < k) {
-          if (!science_stats_kmeansCompare(newCentroids[j], centroids[j])) {
-            repeat = 1;
-            break;
-          }
-        }
-        centroids = newCentroids;
-        iterations++;
       }
-      return { assignments, centroids };
+      const sums = Array.from({ length: k }, () => new Array(dimensions).fill(0)), counts = new Array(k).fill(0);
+      for (let i = 0; i < n; i++) {
+        const j = assignments[i];
+        counts[j]++;
+        for (let d2 = 0; d2 < dimensions; d2++) sums[j][d2] += vectors[i][d2];
+      }
+      centroids = centroids.map((c2, j) => counts[j] ? sums[j].map((s) => s / counts[j]) : c2);
     }
-    kmeans.k = function(x) {
-      if (!arguments.length) return k;
-      k = x;
-      return kmeans;
-    };
-    kmeans.distance = function(x) {
-      if (!arguments.length) return distance;
-      distance = x;
-      return kmeans;
-    };
-    return kmeans;
-  };
-  function science_stats_kmeansCompare(a, b) {
-    if (!a || !b || a.length !== b.length) return false;
-    var n = a.length, i = -1;
-    while (++i < n) if (a[i] !== b[i]) return false;
-    return true;
+    return { assignments, centroids, iterations };
   }
-  function science_stats_kmeansRandom(k, vectors) {
-    var n = vectors.length;
-    if (k > n) return null;
-    var selected_vectors = [];
-    var selected_indices = [];
-    var tested_indices = {};
-    var tested = 0;
-    var selected = 0;
-    var i, vector, select;
-    while (selected < k) {
-      if (tested === n) return null;
-      var random_index = Math.floor(Math.random() * n);
-      if (random_index in tested_indices) continue;
-      tested_indices[random_index] = 1;
-      tested++;
-      vector = vectors[random_index];
-      select = true;
-      for (i = 0; i < selected; i++) {
-        if (science_stats_kmeansCompare(vector, selected_vectors[i])) {
-          select = false;
-          break;
+  function distinctCount(vectors, limit) {
+    const seen = /* @__PURE__ */ new Set();
+    for (let i = 0; i < vectors.length && seen.size < limit; i++) seen.add(Array.from(vectors[i]).join());
+    return seen.size;
+  }
+  function initialCentroids(vectors, k, distance, random) {
+    const n = vectors.length, closest = new Array(n).fill(Infinity), centroids = [Array.from(vectors[Math.min(n - 1, Math.floor(random() * n))])];
+    while (centroids.length < k) {
+      const last = centroids[centroids.length - 1];
+      let total = 0;
+      for (let i = 0; i < n; i++) {
+        const d2 = distance(vectors[i], last);
+        closest[i] = Math.min(closest[i], d2 * d2);
+        total += closest[i];
+      }
+      let target = random() * total, chosen = -1;
+      for (let i = 0; i < n; i++) {
+        if (closest[i] > 0) {
+          chosen = i;
+          target -= closest[i];
+          if (target < 0) break;
         }
       }
-      if (select) {
-        selected_vectors[selected] = vector;
-        selected_indices[selected] = random_index;
-        selected++;
-      }
+      if (chosen < 0) throw new RangeError("There are fewer vectors at a positive distance from each other than clusters.");
+      centroids.push(Array.from(vectors[chosen]));
     }
-    return selected_vectors;
+    return centroids;
   }
 
   // src/stats/hcluster.js
-  science.stats.hcluster = function() {
-    var distance = science.stats.distance.euclidean, linkage = "single";
-    function hcluster(vectors) {
-      if (linkage !== "single" && linkage !== "complete" && linkage !== "average") {
-        throw { error: "Unknown linkage: " + linkage };
+  function hcluster(vectors, { linkage = "single", distance = distances.euclidean } = {}) {
+    if (linkage !== "single" && linkage !== "complete" && linkage !== "average") {
+      throw new RangeError(`Unknown linkage: ${linkage}`);
+    }
+    requireFunction(distance, "distance");
+    const n = requireMatrix(vectors, "vectors")[0];
+    const clusters = [], sizes = [], distMatrix = [], dMin = [];
+    for (let i = 0; i < n; i++) {
+      clusters[i] = { left: null, right: null, height: 0, size: 1, depth: 0, index: i, centroid: Array.from(vectors[i]) };
+      sizes[i] = 1;
+    }
+    if (n === 1) return clusters[0];
+    for (let i = 0; i < n; i++) {
+      dMin[i] = 0;
+      distMatrix[i] = [];
+      for (let j = 0; j < n; j++) {
+        distMatrix[i][j] = i === j ? Infinity : distance(vectors[i], vectors[j]);
+        if (distMatrix[i][dMin[i]] > distMatrix[i][j]) dMin[i] = j;
       }
-      var n = vectors.length, dMin = [], cSize = [], distMatrix = [], clusters = [], c1, c2, c1Cluster, c2Cluster, p, root, i, j;
-      i = -1;
-      while (++i < n) {
-        dMin[i] = 0;
-        distMatrix[i] = [];
-        j = -1;
-        while (++j < n) {
-          distMatrix[i][j] = i === j ? Infinity : distance(vectors[i], vectors[j]);
-          if (distMatrix[i][dMin[i]] > distMatrix[i][j]) dMin[i] = j;
+    }
+    let root;
+    for (let p = 0; p < n - 1; p++) {
+      let c1 = 0;
+      for (let i = 0; i < n; i++) {
+        if (distMatrix[i][dMin[i]] < distMatrix[c1][dMin[c1]]) c1 = i;
+      }
+      const c2 = dMin[c1], left = clusters[c1], right = clusters[c2];
+      root = clusters[c1] = {
+        left,
+        right,
+        height: distMatrix[c1][c2],
+        size: left.size + right.size,
+        depth: 1 + Math.max(left.depth, right.depth),
+        index: n + p,
+        centroid: left.centroid.map((v, i) => (left.size * v + right.size * right.centroid[i]) / (left.size + right.size))
+      };
+      for (let j = 0; j < n; j++) {
+        if (j === c1 || j === c2) continue;
+        if (linkage === "single") {
+          if (distMatrix[c1][j] > distMatrix[c2][j]) distMatrix[j][c1] = distMatrix[c1][j] = distMatrix[c2][j];
+        } else if (linkage === "complete") {
+          if (distMatrix[c1][j] < distMatrix[c2][j]) distMatrix[j][c1] = distMatrix[c1][j] = distMatrix[c2][j];
+        } else {
+          distMatrix[j][c1] = distMatrix[c1][j] = (sizes[c1] * distMatrix[c1][j] + sizes[c2] * distMatrix[c2][j]) / (sizes[c1] + sizes[c2]);
         }
       }
-      i = -1;
-      while (++i < n) {
-        clusters[i] = [];
-        clusters[i][0] = {
-          left: null,
-          right: null,
-          dist: 0,
-          centroid: vectors[i],
-          size: 1,
-          depth: 0
-        };
-        cSize[i] = 1;
-      }
-      for (p = 0; p < n - 1; p++) {
-        c1 = 0;
-        for (i = 0; i < n; i++) {
-          if (distMatrix[i][dMin[i]] < distMatrix[c1][dMin[c1]]) c1 = i;
-        }
-        c2 = dMin[c1];
-        c1Cluster = clusters[c1][0];
-        c2Cluster = clusters[c2][0];
-        var newCluster = {
-          left: c1Cluster,
-          right: c2Cluster,
-          dist: distMatrix[c1][c2],
-          centroid: calculateCentroid(
-            c1Cluster.size,
-            c1Cluster.centroid,
-            c2Cluster.size,
-            c2Cluster.centroid
-          ),
-          size: c1Cluster.size + c2Cluster.size,
-          depth: 1 + Math.max(c1Cluster.depth, c2Cluster.depth)
-        };
-        clusters[c1].splice(0, 0, newCluster);
-        for (j = 0; j < n; j++) {
-          if (j === c1 || j === c2) continue;
-          switch (linkage) {
-            case "single":
-              if (distMatrix[c1][j] > distMatrix[c2][j])
-                distMatrix[j][c1] = distMatrix[c1][j] = distMatrix[c2][j];
-              break;
-            case "complete":
-              if (distMatrix[c1][j] < distMatrix[c2][j])
-                distMatrix[j][c1] = distMatrix[c1][j] = distMatrix[c2][j];
-              break;
-            case "average":
-              distMatrix[j][c1] = distMatrix[c1][j] = (cSize[c1] * distMatrix[c1][j] + cSize[c2] * distMatrix[c2][j]) / (cSize[c1] + cSize[c2]);
-              break;
+      sizes[c1] += sizes[c2];
+      for (let i = 0; i < n; i++) distMatrix[i][c2] = distMatrix[c2][i] = Infinity;
+      for (let j = 0; j < n; j++) {
+        if (linkage === "single") {
+          if (dMin[j] === c2) dMin[j] = c1;
+        } else if (dMin[j] === c1 || dMin[j] === c2) {
+          for (let k = 0; k < n; k++) {
+            if (distMatrix[j][k] < distMatrix[j][dMin[j]]) dMin[j] = k;
           }
         }
-        cSize[c1] += cSize[c2];
-        for (i = 0; i < n; i++)
-          distMatrix[i][c2] = distMatrix[c2][i] = Infinity;
-        for (j = 0; j < n; j++) {
-          if (linkage === "single") {
-            if (dMin[j] == c2) dMin[j] = c1;
-          } else if (dMin[j] == c1 || dMin[j] == c2) {
-            for (var k = 0; k < n; k++) {
-              if (distMatrix[j][k] < distMatrix[j][dMin[j]]) dMin[j] = k;
-            }
-          }
-          if (distMatrix[c1][j] < distMatrix[c1][dMin[c1]]) dMin[c1] = j;
-        }
-        root = newCluster;
+        if (distMatrix[c1][j] < distMatrix[c1][dMin[c1]]) dMin[c1] = j;
       }
-      return root;
     }
-    hcluster.linkage = function(x) {
-      if (!arguments.length) return linkage;
-      linkage = x;
-      return hcluster;
-    };
-    hcluster.distance = function(x) {
-      if (!arguments.length) return distance;
-      distance = x;
-      return hcluster;
-    };
-    return hcluster;
-  };
-  function calculateCentroid(c1Size, c1Centroid, c2Size, c2Centroid) {
-    var newCentroid = [], newSize = c1Size + c2Size, n = c1Centroid.length, i = -1;
-    while (++i < n) {
-      newCentroid[i] = (c1Size * c1Centroid[i] + c2Size * c2Centroid[i]) / newSize;
-    }
-    return newCentroid;
+    return root;
   }
-
-  // src/stats/iqr.js
-  science.stats.iqr = function(x) {
-    var quartiles = science.stats.quantiles(x, [0.25, 0.75]);
-    return quartiles[1] - quartiles[0];
-  };
 
   // src/stats/loess.js
-  science.stats.loess = function() {
-    var bandwidth = 0.3, robustnessIters = 2, accuracy = 1e-12;
-    function smooth(xval, yval, weights) {
-      var n = xval.length, i;
-      if (n !== yval.length) throw { error: "Mismatched array lengths" };
-      if (n == 0) throw { error: "At least one point required." };
-      if (!(bandwidth > 0 && bandwidth <= 1)) throw { error: "Bandwidth must be greater than 0 and at most 1." };
-      if (!(robustnessIters >= 0 && robustnessIters % 1 === 0)) throw { error: "Robustness iterations must be a non-negative integer." };
-      if (!(accuracy >= 0)) throw { error: "Accuracy must be a non-negative number." };
-      if (weights == null) {
-        weights = [];
-        i = -1;
-        while (++i < n) weights[i] = 1;
-      } else if (weights.length !== n) throw { error: "Mismatched array lengths" };
-      science_stats_loessFiniteReal(xval);
-      science_stats_loessFiniteReal(yval);
-      science_stats_loessFiniteReal(weights);
-      science_stats_loessSorted(xval);
-      var points = [];
-      i = -1;
-      while (++i < n) {
-        if (weights[i] < 0) throw { error: "Weights must be non-negative." };
-        if (weights[i] > 0) points.push(i);
-      }
-      if (!points.length) throw { error: "At least one weight must be positive." };
-      if (n == 1) return [yval[0]];
-      if (n == 2) return [yval[0], yval[1]];
-      var bandwidthInPoints = Math.floor(bandwidth * n);
-      if (bandwidthInPoints < 2) throw { error: "Bandwidth too small." };
-      var m = points.length, q = Math.min(bandwidthInPoints, m), res = [], residuals = [], robustnessWeights = [];
-      i = -1;
-      while (++i < n) {
-        res[i] = 0;
-        residuals[i] = 0;
-        robustnessWeights[i] = 1;
-      }
-      var iter = -1;
-      while (++iter <= robustnessIters) {
-        var left = 0, right = q - 1, x;
-        i = -1;
-        while (++i < n) {
-          x = xval[i];
-          while (right < m - 1 && xval[points[right + 1]] - x < x - xval[points[left]]) {
-            left++;
-            right++;
-          }
-          var h = Math.max(x - xval[points[left]], xval[points[right]] - x), lo = left, hi = right;
-          while (lo > 0 && x - xval[points[lo - 1]] <= h) lo--;
-          while (hi < m - 1 && xval[points[hi + 1]] - x <= h) hi++;
-          var fit = localFit(xval, yval, weights, robustnessWeights, points, lo, hi, x, h, true, true);
-          if (fit == null) {
-            if (weights[i] > 0) fit = yval[i];
-            else {
-              fit = localFit(xval, yval, weights, robustnessWeights, points, lo, hi, x, h, false, true);
-              if (fit == null) fit = localFit(xval, yval, weights, robustnessWeights, points, lo, hi, x, h, false, false);
-            }
-          }
-          res[i] = fit;
-          residuals[i] = Math.abs(yval[i] - fit);
-        }
-        if (iter === robustnessIters) {
-          break;
-        }
-        var medianResidual = science.stats.median(points.map(function(p) {
-          return residuals[p];
-        }));
-        if (medianResidual < accuracy || !medianResidual)
-          break;
-        var arg, w;
-        i = -1;
-        while (++i < n) {
-          arg = residuals[i] / (6 * medianResidual);
-          robustnessWeights[i] = arg >= 1 ? 0 : (w = 1 - arg * arg) * w;
-        }
-      }
-      return res;
+  function loess(x, y, { bandwidth = 0.3, robustnessIterations = 2, accuracy = 1e-12, weights } = {}) {
+    requireFiniteNumbers(x, "x");
+    requireFiniteNumbers(y, "y");
+    requireSameLength(x, y);
+    const n = x.length;
+    if (n === 0) throw new RangeError("At least one point is required.");
+    if (!(bandwidth > 0 && bandwidth <= 1)) throw new RangeError("bandwidth must be greater than 0 and at most 1.");
+    if (!(Number.isInteger(robustnessIterations) && robustnessIterations >= 0)) throw new RangeError("robustnessIterations must be a non-negative integer.");
+    if (!(accuracy >= 0)) throw new RangeError("accuracy must be a non-negative number.");
+    if (weights == null) {
+      weights = new Array(n).fill(1);
+    } else {
+      requireFiniteNumbers(weights, "weights");
+      requireSameLength(x, weights);
     }
-    function localFit(xval, yval, weights, robustnessWeights, points, lo, hi, x, h, local, robust) {
-      var sumWeights = 0, sumX = 0, sumY = 0, k, p, w;
-      for (k = lo; k <= hi; ++k) {
-        p = points[k];
-        w = weights[p];
-        if (robust) w *= robustnessWeights[p];
-        if (local && h > 0) w *= science_stats_loessTricube(Math.abs(xval[p] - x) / h);
-        sumWeights += w;
-        sumX += w * (xval[p] - x);
-        sumY += w * yval[p];
+    for (let i = 1; i < n; i++) {
+      if (x[i - 1] > x[i]) throw new RangeError("x must be sorted in ascending order.");
+    }
+    const points = [];
+    for (let i = 0; i < n; i++) {
+      if (weights[i] < 0) throw new RangeError("weights must be non-negative.");
+      if (weights[i] > 0) points.push(i);
+    }
+    if (!points.length) throw new RangeError("At least one weight must be positive.");
+    if (n <= 2) return Array.from(y);
+    const bandwidthInPoints = Math.floor(bandwidth * n);
+    if (bandwidthInPoints < 2) throw new RangeError("bandwidth is too small for the number of points.");
+    const m = points.length, q = Math.min(bandwidthInPoints, m), res = new Array(n).fill(0), residuals = new Array(n).fill(0), robustnessWeights = new Array(n).fill(1);
+    function localFit(lo, hi, xi, h, local, robust) {
+      let sumWeights = 0, sumX = 0, sumY = 0;
+      const w = [];
+      for (let k = lo; k <= hi; k++) {
+        const p = points[k];
+        let wk = weights[p];
+        if (robust) wk *= robustnessWeights[p];
+        if (local && h > 0) wk *= tricube(Math.abs(x[p] - xi) / h);
+        w.push(wk);
+        sumWeights += wk;
+        sumX += wk * (x[p] - xi);
+        sumY += wk * y[p];
       }
       if (!(sumWeights > 0)) return null;
-      var meanX = sumX / sumWeights, meanY = sumY / sumWeights, sumXX = 0, sumXY = 0, dx;
-      for (k = lo; k <= hi; ++k) {
-        p = points[k];
-        w = weights[p];
-        if (robust) w *= robustnessWeights[p];
-        if (local && h > 0) w *= science_stats_loessTricube(Math.abs(xval[p] - x) / h);
-        dx = xval[p] - x - meanX;
-        sumXX += w * dx * dx;
-        sumXY += w * dx * (yval[p] - meanY);
+      const meanX = sumX / sumWeights, meanY = sumY / sumWeights;
+      let sumXX = 0, sumXY = 0;
+      for (let k = lo; k <= hi; k++) {
+        const p = points[k], dx = x[p] - xi - meanX;
+        sumXX += w[k - lo] * dx * dx;
+        sumXY += w[k - lo] * dx * (y[p] - meanY);
       }
-      var beta = Math.sqrt(sumXX / sumWeights) < accuracy || !sumXX ? 0 : sumXY / sumXX;
+      const beta = Math.sqrt(sumXX / sumWeights) < accuracy || !sumXX ? 0 : sumXY / sumXX;
       return meanY - beta * meanX;
     }
-    smooth.bandwidth = function(x) {
-      if (!arguments.length) return bandwidth;
-      bandwidth = x;
-      return smooth;
-    };
-    smooth.robustnessIterations = function(x) {
-      if (!arguments.length) return robustnessIters;
-      robustnessIters = x;
-      return smooth;
-    };
-    smooth.accuracy = function(x) {
-      if (!arguments.length) return accuracy;
-      accuracy = x;
-      return smooth;
-    };
-    return smooth;
-  };
-  function science_stats_loessFiniteReal(values) {
-    var n = values.length, i = -1;
-    while (++i < n) if (!Number.isFinite(values[i])) throw { error: "Values must be finite numbers." };
-  }
-  function science_stats_loessSorted(xval) {
-    var n = xval.length, i = 0;
-    while (++i < n) if (xval[i - 1] > xval[i]) throw { error: "X values must be sorted in ascending order." };
-  }
-  function science_stats_loessTricube(x) {
-    return (x = 1 - x * x * x) * x * x;
-  }
-
-  // src/stats/mean.js
-  science.stats.mean = function(x) {
-    var n = x.length;
-    if (n === 0) return NaN;
-    var m = 0, i = -1;
-    while (++i < n) m += (x[i] - m) / (i + 1);
-    return m;
-  };
-
-  // src/stats/median.js
-  science.stats.median = function(x) {
-    return science.stats.quantiles(x, [0.5])[0];
-  };
-
-  // src/stats/mode.js
-  science.stats.mode = function(x) {
-    var counts = /* @__PURE__ */ Object.create(null), mode = [], max = 0, n = x.length, i = -1, d, k;
-    while (++i < n) {
-      d = x[i];
-      k = Object.prototype.hasOwnProperty.call(counts, d) ? ++counts[d] : counts[d] = 1;
-      if (k === max) mode.push(d);
-      else if (k > max) {
-        max = k;
-        mode = [d];
+    for (let iteration = 0; iteration <= robustnessIterations; iteration++) {
+      let left = 0, right = q - 1;
+      for (let i = 0; i < n; i++) {
+        const xi = x[i];
+        while (right < m - 1 && x[points[right + 1]] - xi < xi - x[points[left]]) {
+          left++;
+          right++;
+        }
+        const h = Math.max(xi - x[points[left]], x[points[right]] - xi);
+        let lo = left, hi = right;
+        while (lo > 0 && xi - x[points[lo - 1]] <= h) lo--;
+        while (hi < m - 1 && x[points[hi + 1]] - xi <= h) hi++;
+        let fit = localFit(lo, hi, xi, h, true, true);
+        if (fit == null) {
+          if (weights[i] > 0) fit = y[i];
+          else {
+            fit = localFit(lo, hi, xi, h, false, true);
+            if (fit == null) fit = localFit(lo, hi, xi, h, false, false);
+          }
+        }
+        res[i] = fit;
+        residuals[i] = Math.abs(y[i] - fit);
+      }
+      if (iteration === robustnessIterations) break;
+      const medianResidual = median(points.map((p) => residuals[p]));
+      if (medianResidual < accuracy || !medianResidual) break;
+      for (let i = 0; i < n; i++) {
+        const arg = residuals[i] / (6 * medianResidual);
+        robustnessWeights[i] = arg >= 1 ? 0 : (1 - arg * arg) ** 2;
       }
     }
-    if (mode.length === 1) return mode[0];
-  };
-
-  // src/stats/quantiles.js
-  science.stats.quantiles = function(d, quantiles) {
-    d = d.slice().sort(science.ascending);
-    var n_1 = d.length - 1;
-    return quantiles.map(function(q) {
-      if (q === 0) return d[0];
-      else if (q === 1) return d[n_1];
-      var index = 1 + q * n_1, lo = Math.floor(index), h = index - lo, a = d[lo - 1];
-      return h === 0 ? a : a + h * (d[lo] - a);
-    });
-  };
-
-  // src/stats/variance.js
-  science.stats.variance = function(x) {
-    var n = x.length;
-    if (n < 1) return NaN;
-    if (n === 1) return 0;
-    var mean = science.stats.mean(x), i = -1, s = 0;
-    while (++i < n) {
-      var v = x[i] - mean;
-      s += v * v;
-    }
-    return s / (n - 1);
-  };
-
-  // src/stats/distribution.js
-  science.stats.distribution = {};
-
-  // src/stats/distribution/gaussian.js
-  science.stats.distribution.gaussian = function() {
-    var random = Math.random, mean = 0, sigma = 1, variance = 1;
-    function gaussian() {
-      var x1, x2, rad, y1;
-      do {
-        x1 = 2 * random() - 1;
-        x2 = 2 * random() - 1;
-        rad = x1 * x1 + x2 * x2;
-      } while (rad >= 1 || rad === 0);
-      return mean + sigma * x1 * Math.sqrt(-2 * Math.log(rad) / rad);
-    }
-    gaussian.pdf = function(x) {
-      x = (x - mean) / sigma;
-      return science_stats_distribution_gaussianConstant * Math.exp(-0.5 * x * x) / sigma;
-    };
-    gaussian.cdf = function(x) {
-      x = (x - mean) / sigma;
-      return 0.5 * (1 + science.stats.erf(x / Math.SQRT2));
-    };
-    gaussian.mean = function(x) {
-      if (!arguments.length) return mean;
-      mean = +x;
-      return gaussian;
-    };
-    gaussian.variance = function(x) {
-      if (!arguments.length) return variance;
-      sigma = Math.sqrt(variance = +x);
-      return gaussian;
-    };
-    gaussian.random = function(x) {
-      if (!arguments.length) return random;
-      random = x;
-      return gaussian;
-    };
-    return gaussian;
-  };
-  var science_stats_distribution_gaussianConstant = 1 / Math.sqrt(2 * Math.PI);
+    return res;
+  }
+  function tricube(x) {
+    const t = 1 - x * x * x;
+    return t * t * t;
+  }
+  return __toCommonJS(index_exports);
 })();
-globalThis.science = science;

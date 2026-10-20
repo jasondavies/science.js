@@ -1,137 +1,90 @@
-// Based on figue implementation by Jean-Yves Delort.
-// http://code.google.com/p/figue/
-science.stats.kmeans = function() {
-  var distance = science.stats.distance.euclidean,
-      maxIterations = 1000,
-      k = 1;
+import { distances } from "./distances.js";
+import { requireMatrix, requireFunction } from "../validate.js";
 
-  function kmeans(vectors) {
-    var n = vectors.length,
-        assignments = [],
-        clusterSizes = [],
-        repeat = 1,
-        iterations = 0,
-        centroids = science_stats_kmeansRandom(k, vectors),
-        newCentroids,
-        i,
-        j,
-        x,
-        d,
-        min,
-        best;
-    if (!centroids) throw {error: "Not enough distinct vectors for k clusters."};
+// k-means clustering with k-means++ initialisation (Arthur and Vassilvitskii,
+// 2007), iterating until the assignments stop changing.
+export function kmeans(vectors, {k, distance = distances.euclidean, maxIterations = 1000, random = Math.random} = {}) {
+  const [n, dimensions] = requireMatrix(vectors, "vectors");
+  if (!(Number.isInteger(k) && k >= 1)) throw new RangeError("k must be a positive integer.");
+  if (!(Number.isInteger(maxIterations) && maxIterations >= 1)) throw new RangeError("maxIterations must be a positive integer.");
+  requireFunction(distance, "distance");
+  requireFunction(random, "random");
+  if (distinctCount(vectors, k) < k) throw new RangeError("There are fewer distinct vectors than clusters.");
 
-    while (repeat && iterations < maxIterations) {
-      // Assignment step.
-      j = -1; while (++j < k) {
-        clusterSizes[j] = 0;
-      }
+  let centroids = initialCentroids(vectors, k, distance, random),
+      assignments = new Array(n).fill(-1),
+      iterations = 0,
+      changed = true;
 
-      i = -1; while (++i < n) {
-        x = vectors[i];
-        min = Infinity;
-        j = -1; while (++j < k) {
-          d = distance.call(this, centroids[j], x);
-          if (d < min) {
-            min = d;
-            best = j;
-          }
-        }
-        clusterSizes[assignments[i] = best]++;
-      }
+  while (changed && iterations < maxIterations) {
+    iterations++;
+    changed = false;
 
-      // Update centroids step.
-      newCentroids = [];
-      i = -1; while (++i < n) {
-        x = assignments[i];
-        d = newCentroids[x];
-        if (d == null) newCentroids[x] = vectors[i].slice();
-        else {
-          j = -1; while (++j < d.length) {
-            d[j] += vectors[i][j];
-          }
+    // Assign each vector to its closest centroid.
+    for (let i = 0; i < n; i++) {
+      let best = 0,
+          min = Infinity;
+      for (let j = 0; j < k; j++) {
+        const d = distance(vectors[i], centroids[j]);
+        if (d < min) {
+          min = d;
+          best = j;
         }
       }
-      j = -1; while (++j < k) {
-        x = newCentroids[j];
-        d = 1 / clusterSizes[j];
-        i = -1; while (++i < x.length) x[i] *= d;
+      if (assignments[i] !== best) {
+        assignments[i] = best;
+        changed = true;
       }
-
-      // Check convergence.
-      repeat = 0;
-      j = -1; while (++j < k) {
-        if (!science_stats_kmeansCompare(newCentroids[j], centroids[j])) {
-          repeat = 1;
-          break;
-        }
-      }
-      centroids = newCentroids;
-      iterations++;
     }
-    return {assignments: assignments, centroids: centroids};
+
+    // Move each centroid to the mean of its vectors; a centroid with no
+    // vectors stays where it is.
+    const sums = Array.from({length: k}, () => new Array(dimensions).fill(0)),
+          counts = new Array(k).fill(0);
+    for (let i = 0; i < n; i++) {
+      const j = assignments[i];
+      counts[j]++;
+      for (let d = 0; d < dimensions; d++) sums[j][d] += vectors[i][d];
+    }
+    centroids = centroids.map((c, j) => counts[j] ? sums[j].map((s) => s / counts[j]) : c);
   }
 
-  kmeans.k = function(x) {
-    if (!arguments.length) return k;
-    k = x;
-    return kmeans;
-  };
-
-  kmeans.distance = function(x) {
-    if (!arguments.length) return distance;
-    distance = x;
-    return kmeans;
-  };
-
-  return kmeans;
-};
-
-function science_stats_kmeansCompare(a, b) {
-  if (!a || !b || a.length !== b.length) return false;
-  var n = a.length,
-      i = -1;
-  while (++i < n) if (a[i] !== b[i]) return false;
-  return true;
+  return {assignments, centroids, iterations};
 }
 
-// Returns an array of k distinct vectors randomly selected from the input
-// array of vectors. Returns null if k > n or if there are less than k distinct
-// objects in vectors.
-function science_stats_kmeansRandom(k, vectors) {
-  var n = vectors.length;
-  if (k > n) return null;
-  
-  var selected_vectors = [];
-  var selected_indices = [];
-  var tested_indices = {};
-  var tested = 0;
-  var selected = 0;
-  var i,
-      vector,
-      select;
+// The number of distinct vectors, counting no further than limit.
+function distinctCount(vectors, limit) {
+  const seen = new Set();
+  for (let i = 0; i < vectors.length && seen.size < limit; i++) seen.add(Array.from(vectors[i]).join());
+  return seen.size;
+}
 
-  while (selected < k) {
-    if (tested === n) return null;
-    
-    var random_index = Math.floor(Math.random() * n);
-    if (random_index in tested_indices) continue;
-    
-    tested_indices[random_index] = 1;
-    tested++;
-    vector = vectors[random_index];
-    select = true;
-    for (i = 0; i < selected; i++) {
-      if (science_stats_kmeansCompare(vector, selected_vectors[i])) {
-        select = false;
-        break;
+// Chooses the first centroid uniformly at random, and each further centroid
+// with probability proportional to its squared distance from the closest
+// centroid chosen so far.
+function initialCentroids(vectors, k, distance, random) {
+  const n = vectors.length,
+        closest = new Array(n).fill(Infinity),
+        centroids = [Array.from(vectors[Math.min(n - 1, Math.floor(random() * n))])];
+  while (centroids.length < k) {
+    const last = centroids[centroids.length - 1];
+    let total = 0;
+    for (let i = 0; i < n; i++) {
+      const d = distance(vectors[i], last);
+      closest[i] = Math.min(closest[i], d * d);
+      total += closest[i];
+    }
+    let target = random() * total,
+        chosen = -1;
+    for (let i = 0; i < n; i++) {
+      if (closest[i] > 0) {
+        chosen = i;
+        target -= closest[i];
+        if (target < 0) break;
       }
     }
-    if (select) {
-      selected_vectors[selected] = vector;
-      selected_indices[selected] = random_index;
-      selected++;
-    }
+    if (chosen < 0) throw new RangeError("There are fewer vectors at a positive distance from each other than clusters.");
+    centroids.push(Array.from(vectors[chosen]));
   }
-  return selected_vectors;
+  return centroids;
 }

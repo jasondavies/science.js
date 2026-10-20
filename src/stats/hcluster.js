@@ -1,140 +1,87 @@
-science.stats.hcluster = function() {
-  var distance = science.stats.distance.euclidean,
-      linkage = "single"; // single, complete or average
+import { distances } from "./distances.js";
+import { requireMatrix, requireFunction } from "../validate.js";
 
-  function hcluster(vectors) {
-    if (linkage !== "single" && linkage !== "complete" && linkage !== "average") {
-      throw {error: "Unknown linkage: " + linkage};
-    }
+// Agglomerative hierarchical clustering. Returns the root of the binary tree
+// of merged clusters.
+export function hcluster(vectors, {linkage = "single", distance = distances.euclidean} = {}) {
+  if (linkage !== "single" && linkage !== "complete" && linkage !== "average") {
+    throw new RangeError(`Unknown linkage: ${linkage}`);
+  }
+  requireFunction(distance, "distance");
+  const n = requireMatrix(vectors, "vectors")[0];
 
-    var n = vectors.length,
-        dMin = [],
-        cSize = [],
+  // Leaves are numbered 0 to n - 1 in input order, and merged clusters n, n + 1,
+  // ... in the order they are created.
+  const clusters = [],
+        sizes = [],
         distMatrix = [],
-        clusters = [],
-        c1,
-        c2,
-        c1Cluster,
-        c2Cluster,
-        p,
-        root,
-        i,
-        j;
+        dMin = [];
+  for (let i = 0; i < n; i++) {
+    clusters[i] = {left: null, right: null, height: 0, size: 1, depth: 0, index: i, centroid: Array.from(vectors[i])};
+    sizes[i] = 1;
+  }
+  if (n === 1) return clusters[0];
 
-    // Initialise distance matrix and vector of closest clusters.
-    i = -1; while (++i < n) {
-      dMin[i] = 0;
-      distMatrix[i] = [];
-      j = -1; while (++j < n) {
-        distMatrix[i][j] = i === j ? Infinity : distance(vectors[i] , vectors[j]);
-        if (distMatrix[i][dMin[i]] > distMatrix[i][j]) dMin[i] = j;
-      }
+  // The distance matrix, and the closest cluster to each cluster.
+  for (let i = 0; i < n; i++) {
+    dMin[i] = 0;
+    distMatrix[i] = [];
+    for (let j = 0; j < n; j++) {
+      distMatrix[i][j] = i === j ? Infinity : distance(vectors[i], vectors[j]);
+      if (distMatrix[i][dMin[i]] > distMatrix[i][j]) dMin[i] = j;
     }
-
-    // create leaves of the tree
-    i = -1; while (++i < n) {
-      clusters[i] = [];
-      clusters[i][0] = {
-        left: null,
-        right: null,
-        dist: 0,
-        centroid: vectors[i],
-        size: 1,
-        depth: 0
-      };
-      cSize[i] = 1;
-    }
-
-    // Main loop
-    for (p = 0; p < n-1; p++) {
-      // find the closest pair of clusters
-      c1 = 0;
-      for (i = 0; i < n; i++) {
-        if (distMatrix[i][dMin[i]] < distMatrix[c1][dMin[c1]]) c1 = i;
-      }
-      c2 = dMin[c1];
-
-      // create node to store cluster info 
-      c1Cluster = clusters[c1][0];
-      c2Cluster = clusters[c2][0];
-
-      var newCluster = {
-        left: c1Cluster,
-        right: c2Cluster,
-        dist: distMatrix[c1][c2],
-        centroid: calculateCentroid(c1Cluster.size, c1Cluster.centroid,
-          c2Cluster.size, c2Cluster.centroid),
-        size: c1Cluster.size + c2Cluster.size,
-        depth: 1 + Math.max(c1Cluster.depth, c2Cluster.depth)
-      };
-      clusters[c1].splice(0, 0, newCluster);
-
-      // overwrite row c1 with respect to the linkage type
-      for (j = 0; j < n; j++) {
-        if (j === c1 || j === c2) continue;
-        switch (linkage) {
-          case "single":
-            if (distMatrix[c1][j] > distMatrix[c2][j])
-              distMatrix[j][c1] = distMatrix[c1][j] = distMatrix[c2][j];
-            break;
-          case "complete":
-            if (distMatrix[c1][j] < distMatrix[c2][j])
-              distMatrix[j][c1] = distMatrix[c1][j] = distMatrix[c2][j];
-            break;
-          case "average":
-            distMatrix[j][c1] = distMatrix[c1][j] = (cSize[c1] * distMatrix[c1][j] + cSize[c2] * distMatrix[c2][j]) / (cSize[c1] + cSize[c2]);
-            break;
-        }
-      }
-      cSize[c1] += cSize[c2];
-
-      // infinity ­out old row c2 and column c2
-      for (i = 0; i < n; i++)
-        distMatrix[i][c2] = distMatrix[c2][i] = Infinity;
-
-      // update dmin and replace ones that previous pointed to c2 to point to c1
-      for (j = 0; j < n; j++) {
-        if (linkage === "single") {
-          if (dMin[j] == c2) dMin[j] = c1;
-        } else if (dMin[j] == c1 || dMin[j] == c2) {
-          // Complete and average linkage can move c1 further away, so find
-          // the closest cluster again.
-          for (var k = 0; k < n; k++) {
-            if (distMatrix[j][k] < distMatrix[j][dMin[j]]) dMin[j] = k;
-          }
-        }
-        if (distMatrix[c1][j] < distMatrix[c1][dMin[c1]]) dMin[c1] = j;
-      }
-
-      // keep track of the last added cluster
-      root = newCluster;
-    }
-
-    return root;
   }
 
-  hcluster.linkage = function(x) {
-    if (!arguments.length) return linkage;
-    linkage = x;
-    return hcluster;
-  };
+  let root;
+  for (let p = 0; p < n - 1; p++) {
+    // Find the closest pair of clusters.
+    let c1 = 0;
+    for (let i = 0; i < n; i++) {
+      if (distMatrix[i][dMin[i]] < distMatrix[c1][dMin[c1]]) c1 = i;
+    }
+    const c2 = dMin[c1],
+          left = clusters[c1],
+          right = clusters[c2];
 
-  hcluster.distance = function(x) {
-    if (!arguments.length) return distance;
-    distance = x;
-    return hcluster;
-  };
+    root = clusters[c1] = {
+      left,
+      right,
+      height: distMatrix[c1][c2],
+      size: left.size + right.size,
+      depth: 1 + Math.max(left.depth, right.depth),
+      index: n + p,
+      centroid: left.centroid.map((v, i) => (left.size * v + right.size * right.centroid[i]) / (left.size + right.size))
+    };
 
-  return hcluster;
-};
+    // Update the distances to the merged cluster, which replaces c1.
+    for (let j = 0; j < n; j++) {
+      if (j === c1 || j === c2) continue;
+      if (linkage === "single") {
+        if (distMatrix[c1][j] > distMatrix[c2][j]) distMatrix[j][c1] = distMatrix[c1][j] = distMatrix[c2][j];
+      } else if (linkage === "complete") {
+        if (distMatrix[c1][j] < distMatrix[c2][j]) distMatrix[j][c1] = distMatrix[c1][j] = distMatrix[c2][j];
+      } else {
+        distMatrix[j][c1] = distMatrix[c1][j] = (sizes[c1] * distMatrix[c1][j] + sizes[c2] * distMatrix[c2][j]) / (sizes[c1] + sizes[c2]);
+      }
+    }
+    sizes[c1] += sizes[c2];
 
-function calculateCentroid(c1Size, c1Centroid, c2Size, c2Centroid) {
-  var newCentroid = [],
-      newSize = c1Size + c2Size,
-      n = c1Centroid.length,
-      i = -1;
-  while (++i < n) {
-    newCentroid[i] = (c1Size * c1Centroid[i] + c2Size * c2Centroid[i]) / newSize;
+    // Remove c2.
+    for (let i = 0; i < n; i++) distMatrix[i][c2] = distMatrix[c2][i] = Infinity;
+
+    // Update the closest clusters. Complete and average linkage can move c1
+    // further away, so the closest cluster is found again.
+    for (let j = 0; j < n; j++) {
+      if (linkage === "single") {
+        if (dMin[j] === c2) dMin[j] = c1;
+      } else if (dMin[j] === c1 || dMin[j] === c2) {
+        for (let k = 0; k < n; k++) {
+          if (distMatrix[j][k] < distMatrix[j][dMin[j]]) dMin[j] = k;
+        }
+      }
+      if (distMatrix[c1][j] < distMatrix[c1][dMin[c1]]) dMin[c1] = j;
+    }
   }
-  return newCentroid;
+
+  return root;
 }

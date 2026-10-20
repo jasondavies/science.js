@@ -19,20 +19,28 @@
     "url": "git+https://github.com/jasondavies/science.js.git"
   },
   "main": "./index.js",
+  "types": "./index.d.ts",
   "exports": {
-    ".": "./index.js",
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
     "./package.json": "./package.json",
     "./dist/*": "./dist/*"
   },
+  "sideEffects": false,
   "files": [
+    "src/",
     "dist/",
     "index.js",
+    "index.d.ts",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "scripts": {
     "build": "node build.js",
-    "clean": "rm -f dist/science.esm.js dist/science.js dist/science.min.js",
+    "clean": "rm -f dist/science.js dist/science.min.js",
     "test": "npm run build && node test/index.js"
   },
   "engines": {

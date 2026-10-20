@@ -43,15 +43,17 @@ jobs:
           pack_dir=$(mktemp -d)
           trap 'rm -rf "$pack_dir"' EXIT
           npm pack --ignore-scripts --json --pack-destination "$pack_dir" > "$pack_dir/pack.json"
-          node --input-type=module - "$pack_dir/pack.json" <<'JS'
+          git ls-files src > "$pack_dir/sources.txt"
+          node --input-type=module - "$pack_dir/pack.json" "$pack_dir/sources.txt" <<'JS'
           import assert from 'node:assert/strict';
           import { readFileSync } from 'node:fs';
 
-          const [pack] = JSON.parse(readFileSync(process.argv[2], 'utf8'));
+          const [pack] = JSON.parse(readFileSync(process.argv[2], 'utf8')),
+                sources = readFileSync(process.argv[3], 'utf8').trim().split('\n');
           assert.deepEqual(pack.files.map(file => file.path).sort(), [
-            'LICENSE', 'README.md', 'dist/science.esm.js', 'dist/science.js', 'dist/science.min.js', 'index.js',
-            'package.json'
-          ]);
+            'CHANGELOG.md', 'LICENSE', 'README.md', 'dist/science.js', 'dist/science.min.js', 'index.d.ts', 'index.js',
+            'package.json', ...sources
+          ].sort());
           JS
           mkdir "$pack_dir/consumer"
           cd "$pack_dir/consumer"
@@ -60,20 +62,37 @@ jobs:
           import assert from 'node:assert/strict';
           import { readFileSync } from 'node:fs';
           import { createRequire } from 'node:module';
+          import { dirname, join } from 'node:path';
           import { runInNewContext } from 'node:vm';
-          import science, { science as named } from 'science';
+          import * as science from 'science';
+          import { loess, mean } from 'science';
 
-          const { version } = JSON.parse(readFileSync(createRequire(`${process.cwd()}/`).resolve('science/package.json'), 'utf8'));
+          const packageJson = createRequire(`${process.cwd()}/`).resolve('science/package.json'),
+                { version, exports } = JSON.parse(readFileSync(packageJson, 'utf8'));
           assert.equal(globalThis.science, undefined, 'importing science must not define a global');
-          assert.equal(named, science);
           assert.equal(science.version, version);
-          assert.deepEqual(science.stats.loess().bandwidth(.6)([1, 2, 3, 4, 5], [2, 4, 6, 8, 10]), [2, 4, 6, 8, 10]);
+          assert.equal(mean([1, 2, 3, 4]), 2.5);
+          assert.deepEqual(loess([1, 2, 3, 4, 5], [2, 4, 6, 8, 10], {bandwidth: .6}), [2, 4, 6, 8, 10]);
+          assert.match(readFileSync(join(dirname(packageJson), exports['.'].types), 'utf8'), /export function loess/);
 
           for (const file of ['science.js', 'science.min.js']) {
             const context = {};
-            context.globalThis = context;
             runInNewContext(readFileSync(`node_modules/science/dist/${file}`, 'utf8'), context);
-            assert.deepEqual(Object.keys(context).filter(key => key !== 'globalThis'), ['science'], file);
-            assert.equal(context.science.version, version, file);
+            assert.deepEqual(Object.keys(context), ['science'], file);
+            assert.deepEqual(Object.keys(context.science).sort(), Object.keys(science).sort(), file);
           }
           JS
+      - name: Check unused functions are tree-shaken
+        shell: bash
+        run: |
+          pack_dir=$(mktemp -d)
+          trap 'rm -rf "$pack_dir"' EXIT
+          npm pack --ignore-scripts --pack-destination "$pack_dir" > /dev/null
+          mkdir "$pack_dir/consumer"
+          cd "$pack_dir/consumer"
+          npm install --offline --ignore-scripts --no-audit --no-fund --package-lock=false "$pack_dir"/*.tgz
+          echo 'import { mean } from "science"; console.log(mean([1, 2]));' > entry.js
+          "$GITHUB_WORKSPACE/node_modules/.bin/esbuild" entry.js --bundle --format=esm --outfile=bundle.js
+          node bundle.js | grep -qx 1.5
+          # Without "sideEffects": false, the frozen kernels object would be kept.
+          ! grep -qE 'robustnessIterations|epanechnikov' bundle.js
