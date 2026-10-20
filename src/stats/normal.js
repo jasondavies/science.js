@@ -1,5 +1,5 @@
 import { erfc } from "./erf.js";
-import { checkOptions, requireFunction, requireProbability } from "../validate.js";
+import { checkedRandom, checkOptions, requireProbability } from "../validate.js";
 
 
 // Module-local, as reading an imported binding in a hot function is slower.
@@ -26,8 +26,7 @@ export function normal(options) {
       return mean + sd * standardQuantile(p);
     },
     sample(random = Math.random) {
-      requireFunction(random, "random");
-      return mean + sd * standardSample(random);
+      return mean + sd * standardSample(checkedRandom(random));
     }
   });
 }
@@ -71,13 +70,16 @@ function standardQuantile(p) {
   return Number.isFinite(u) ? x - u / (1 + x * u / 2) : x;
 }
 
-// The Marsaglia polar method.
+// The Marsaglia polar method. Each attempt succeeds with probability π/4, so a
+// source that fails 1,000 times in a row is not random.
 function standardSample(random) {
   let x, y, s;
-  do {
+  for (let attempts = 0; ; attempts++) {
+    if (attempts === 1000) throw new RangeError("random does not appear to return uniform random numbers.");
     x = 2 * random() - 1;
     y = 2 * random() - 1;
     s = x * x + y * y;
-  } while (s >= 1 || s === 0);
+    if (s < 1 && s !== 0) break;
+  }
   return x * Math.sqrt(-2 * Math.log(s) / s);
 }

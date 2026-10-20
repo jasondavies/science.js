@@ -1,9 +1,16 @@
+import { powerOfTwoNear, scaledNorm } from "../numeric.js";
 import { requireArray, requireSameLength } from "../validate.js";
 
 function check(a, b) {
   requireArray(a, "a");
   requireArray(b, "b");
   requireSameLength(a, b);
+}
+
+// Whether a sum of powers can be used as it is: otherwise it overflowed, or may
+// have underflowed, so the distance is computed again with scaling.
+function safe(s) {
+  return s > 1e-290 && s < 1e290;
 }
 
 // Distance functions between two arrays of the same length.
@@ -15,7 +22,7 @@ export const distances = Object.freeze({
       const x = a[i] - b[i];
       s += x * x;
     }
-    return Math.sqrt(s);
+    return safe(s) ? Math.sqrt(s) : scaledNorm(a.length, (i) => a[i] - b[i]);
   },
 
   manhattan(a, b) {
@@ -40,7 +47,7 @@ export const distances = Object.freeze({
       check(a, b);
       let s = 0;
       for (let i = 0; i < a.length; i++) s += Math.pow(Math.abs(a[i] - b[i]), p);
-      return Math.pow(s, 1 / p);
+      return safe(s) ? Math.pow(s, 1 / p) : scaledNorm(a.length, (i) => a[i] - b[i], p);
     };
   },
 
@@ -74,6 +81,17 @@ export const distances = Object.freeze({
     for (let i = 0; i < a.length; i++) {
       s0 += Math.abs(a[i] - b[i]);
       s1 += Math.abs(a[i] + b[i]);
+    }
+    if (Number.isFinite(s0) && Number.isFinite(s1)) return s0 / s1;
+    // A sum overflowed; the ratio is the same with both arrays scaled down.
+    let max = 0;
+    for (let i = 0; i < a.length; i++) max = Math.max(max, Math.abs(a[i]), Math.abs(b[i]));
+    if (!Number.isFinite(max)) return s0 / s1;
+    const scale = powerOfTwoNear(max);
+    s0 = s1 = 0;
+    for (let i = 0; i < a.length; i++) {
+      s0 += Math.abs(a[i] / scale - b[i] / scale);
+      s1 += Math.abs(a[i] / scale + b[i] / scale);
     }
     return s0 / s1;
   }

@@ -1,3 +1,4 @@
+import { scaledNorm } from "../numeric.js";
 import { requireFiniteNumbers, requireSameLength } from "../validate.js";
 
 export function dot(a, b) {
@@ -24,15 +25,7 @@ export function cross(a, b) {
 // overflows nor underflows.
 export function norm(a) {
   requireFiniteNumbers(a, "a");
-  let max = 0;
-  for (let i = 0; i < a.length; i++) max = Math.max(max, Math.abs(a[i]));
-  if (max === 0) return 0;
-  let s = 0;
-  for (let i = 0; i < a.length; i++) {
-    const x = a[i] / max;
-    s += x * x;
-  }
-  return max * Math.sqrt(s);
+  return scaledNorm(a.length, (i) => a[i]);
 }
 
 export function normalize(a) {

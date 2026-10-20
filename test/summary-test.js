@@ -65,3 +65,18 @@ test("mean and median of infinite or very large values", () => {
   assert.equal(quantile([-1e308, 1e308], .5), 0);
   assert.equal(median([1, Infinity]), Infinity);
 });
+
+test("mean and variance of finite values that overflow when summed", () => {
+  assert.equal(mean([1.7e308, 1.7e308, -1.7e308]), 1.7e308 / 3);
+  assert.equal(mean([-1.7e308, 1.7e308, 1.7e308, 1.7e308]), 8.5e307);
+  assert.equal(variance([1e308, -1e308]), Infinity);
+  assert.inDelta(variance([1e150, -1e150]) / 2e300, 1, 1e-15);
+});
+
+test("summary statistics reject values that are not numbers", () => {
+  for (const f of [mean, median, variance, standardDeviation, iqr, (v) => quantile(v, .5)]) {
+    assert.throws(() => f(["1", "2"]), {name: "TypeError", message: "values must contain only numbers."});
+    assert.throws(() => f([null, 2]), {name: "TypeError"});
+  }
+  assert.deepEqual(modes(["a", "b", "b"]), ["b"]);
+});

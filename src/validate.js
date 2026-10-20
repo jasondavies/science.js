@@ -67,3 +67,27 @@ export function finiteDistance(distance, a, b) {
   if (!Number.isFinite(d)) throw new RangeError(`The distance between two vectors is ${d}; distances must be finite.`);
   return d;
 }
+
+// Requires a non-empty array of rows of equal length, of any values, returning
+// the number of rows and whether every value is a finite number.
+export function requireRows(rows, name) {
+  requireArray(rows, name);
+  if (!rows.length) throw new RangeError(`${name} must not be empty.`);
+  let numeric = true;
+  for (let i = 0; i < rows.length; i++) {
+    requireArray(rows[i], `Each element of ${name}`);
+    if (rows[i].length !== rows[0].length) throw new RangeError(`All elements of ${name} must have the same length.`);
+    for (let j = 0; j < rows[i].length && numeric; j++) numeric = Number.isFinite(rows[i][j]);
+  }
+  return [rows.length, numeric];
+}
+
+// Wraps a source of uniform random numbers, requiring each to be in [0, 1).
+export function checkedRandom(random, name = "random") {
+  requireFunction(random, name);
+  return () => {
+    const r = random();
+    if (!(r >= 0 && r < 1)) throw new RangeError(`${name} must return numbers in [0, 1), but returned ${r}.`);
+    return r;
+  };
+}

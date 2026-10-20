@@ -190,3 +190,28 @@ test("quadratic and determinant return 0 rather than -0", () => {
   assert.deepEqual(quadratic(0, 2, 0), [0]);
   assert.equal(determinant([[1, 2], [2, 4]]), 0);
 });
+
+test("quadratic keeps coefficients of very different magnitudes", () => {
+  assert.deepEqual(quadratic(1e-200, 1, 1e200), []);
+  assert.deepEqual(quadratic(1e-170, 0, -1e170), [-1e170, 1e170]);
+  assert.deepEqual(quadratic(5e-324, 0, 0), [0]);
+  // Subnormal coefficients carry only about 45 bits of precision.
+  assert.inDelta(quadratic(1e-310, -3e-310, 2e-310), [1, 2], 1e-13);
+});
+
+test("eigen is exact for entries of widely different magnitudes", () => {
+  assert.deepEqual(eigen([[1e300, 0], [0, 1e-300]]).values, [1e-300, 1e300]);
+  assert.deepEqual(eigen([[1.3e308, 0], [0, 1]]).values, [1, 1.3e308]);
+  const {values, vectors} = eigen([[2e-200, 1e200], [0, 1e-200]]);
+  assert.deepEqual(values, [2e-200, 1e-200]);
+  assert.isTrue(vectors.flat().every(Number.isFinite));
+  assert.deepEqual(eigen([[1e-310, 0], [0, 2e-310]]).values, [1e-310, 2e-310]);
+});
+
+test("solve and inverse accept rows and columns of very different scales", () => {
+  assert.inDelta(solve([[1e16, 1e16], [1, 2]], [1, 1]), [-1 + 2e-16, 1 - 1e-16], 1e-15);
+  assert.deepEqual(solve([[1e16, 0], [0, 1]], [1, 1]), [1e-16, 1]);
+  assert.deepEqual(inverse([[1e16, 0], [0, 1]]), [[1e-16, 0], [0, 1]]);
+  assert.inDelta(solve([[1e16, 1], [1e16, 2]], [1, 1]), [1e-16, 0], 1e-30);
+  assert.throws(() => inverse([[1, 0], [0, 0]]), {name: "RangeError", message: "Matrix is singular."});
+});

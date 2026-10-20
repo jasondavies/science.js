@@ -1,35 +1,59 @@
+import { powerOfTwoNear } from "../numeric.js";
 import { requireArray, requireProbability } from "../validate.js";
 
-// The arithmetic mean. If the sum of finite values overflows, the mean is
-// computed incrementally instead.
+function requireNumber(v) {
+  if (typeof v !== "number") throw new TypeError("values must contain only numbers.");
+}
+
+// The arithmetic mean. If the sum of finite values overflows, each value is
+// divided by n before summing instead.
 export function mean(values) {
   requireArray(values, "values");
   const n = values.length;
   if (n === 0) return NaN;
   let sum = 0;
-  for (let i = 0; i < n; i++) sum += values[i];
-  if (Number.isFinite(sum)) return sum / n;
-  // The values include an infinity or NaN, so the sum is the right answer.
-  for (let i = 0; i < n; i++) if (!Number.isFinite(values[i])) return sum / n;
+  for (let i = 0; i < n; i++) {
+    const v = values[i];
+    requireNumber(v);
+    sum += v;
+  }
+  if (Number.isFinite(sum) || !allFinite(values)) return sum / n;
   let m = 0;
-  for (let i = 0; i < n; i++) m += (values[i] - m) / (i + 1);
+  for (let i = 0; i < n; i++) m += values[i] / n;
   return m;
 }
 
 // The unbiased sample variance (with denominator n - 1), using Welford's
-// algorithm.
+// algorithm. If that overflows for finite values, it is computed again from
+// the values scaled by a power of 2.
 export function variance(values) {
   requireArray(values, "values");
   const n = values.length;
   if (n < 2) return NaN;
+  for (let i = 0; i < n; i++) requireNumber(values[i]);
+  const v = welford(values, 1);
+  if (Number.isFinite(v) || !allFinite(values)) return v;
+  let max = 0;
+  for (let i = 0; i < n; i++) max = Math.max(max, Math.abs(values[i]));
+  const scale = powerOfTwoNear(max);
+  return welford(values, scale) * scale * scale;
+}
+
+function welford(values, scale) {
   let m = 0,
       s = 0;
-  for (let i = 0; i < n; i++) {
-    const d = values[i] - m;
+  for (let i = 0; i < values.length; i++) {
+    const x = values[i] / scale,
+          d = x - m;
     m += d / (i + 1);
-    s += d * (values[i] - m);
+    s += d * (x - m);
   }
-  return s / (n - 1);
+  return s / (values.length - 1);
+}
+
+function allFinite(values) {
+  for (let i = 0; i < values.length; i++) if (!Number.isFinite(values[i])) return false;
+  return true;
 }
 
 export function standardDeviation(values) {
@@ -38,7 +62,9 @@ export function standardDeviation(values) {
 
 function sorted(values) {
   requireArray(values, "values");
-  return Array.from(values).sort((a, b) => a - b);
+  const s = Array.from(values);
+  for (let i = 0; i < s.length; i++) requireNumber(s[i]);
+  return s.sort((a, b) => a - b);
 }
 
 // R's quantile type 7: linear interpolation between the sorted values.

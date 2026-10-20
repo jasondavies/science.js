@@ -88,3 +88,9 @@ test("normal quantile far into the tail", () => {
   assertRelative(normal().quantile(1e-315), -37.967300351067365, 1e-8);
   assertRelative(normal().quantile(5e-324), -38.467405617144344, 1e-8);
 });
+
+test("normal sample rejects bad random sources instead of hanging", () => {
+  assert.throws(() => normal().sample(() => .5), {name: "RangeError", message: "random does not appear to return uniform random numbers."});
+  assert.throws(() => normal().sample(() => 1.5), {name: "RangeError"});
+  assert.throws(() => normal().sample(5), {name: "TypeError"});
+});

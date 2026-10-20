@@ -48,6 +48,9 @@ throws a `TypeError` (for a value of the wrong type, or an unknown option) or a
 
 ### Summary statistics
 
+These functions take an array of numbers. NaN and infinities are allowed, and
+propagate as in ordinary arithmetic.
+
 <a name="mean" href="#mean">#</a> <b>mean</b>(<i>values</i>)
 
 Returns the arithmetic mean of *values*, or NaN if it is empty. It is computed
@@ -143,8 +146,8 @@ The distribution is an object with these properties and methods:
 * *quantile*(*p*): the inverse of *cdf*, for a probability *p* between 0 and 1.
 * *sample*([*random*]): a random number drawn from the distribution, using the
   [Marsaglia polar method](https://en.wikipedia.org/wiki/Marsaglia_polar_method).
-  *random* is a source of uniform random numbers in [0, 1), which defaults to
-  `Math.random`; pass a seeded generator for reproducible samples.
+  *random* is a function returning uniform random numbers in [0, 1), which
+  defaults to `Math.random`; pass a seeded generator for reproducible samples.
 
 ```javascript
 const heights = normal({mean: 170, sd: 10});
@@ -274,12 +277,12 @@ and iterating until the assignments stop changing. The *options* are:
 * *k*: the number of clusters, which is required. There must be at least *k*
   distinct vectors.
 * *distance*: the [distance](#distances) function used to assign vectors to
-  centroids, which defaults to `distances.euclidean`. Every distance must be
-  finite.
+  centroids, called as *distance*(*vector*, *centroid*), which defaults to
+  `distances.euclidean`. Every distance must be finite.
 * *maxIterations*: the maximum number of iterations, which defaults to 1,000.
-* *random*: a source of uniform random numbers in [0, 1) for the initial
-  centroids, which defaults to `Math.random`; pass a seeded generator for
-  reproducible results.
+* *random*: a function returning uniform random numbers in [0, 1) for the
+  initial centroids, which defaults to `Math.random`; pass a seeded generator
+  for reproducible results.
 
 Returns an object with these properties:
 
@@ -295,18 +298,21 @@ assignments[0] === assignments[2]; // false
 
 <a name="hcluster" href="#hcluster">#</a> <b>hcluster</b>(<i>vectors</i>[, <i>options</i>])
 
-Clusters the array of *vectors* (arrays of numbers, all the same length) with
-agglomerative [hierarchical clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering),
-repeatedly merging the two closest clusters. The *options* are:
+Clusters the array of *vectors* (arrays of the same length) with agglomerative
+[hierarchical clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering),
+repeatedly merging the two closest clusters. The vectors can contain any values
+that the distance function accepts, such as booleans with `distances.jaccard`.
+The *options* are:
 
 * *linkage*: how the distance between two clusters is computed from the
   distances between their vectors: `"single"` (the smallest, the default),
   `"complete"` (the largest) or `"average"` (the mean).
 * *distance*: the [distance](#distances) function between vectors, which
-  defaults to `distances.euclidean`.
+  defaults to `distances.euclidean`. It must be symmetric, and every distance
+  must be finite.
 
 Returns the root of the binary tree of clusters (a single leaf if there is only
-one vector). Every distance must be finite. Each node has these properties:
+one vector). Each node has these properties:
 
 * *left* and *right*: the two merged clusters, or null for a leaf.
 * *height*: the linkage distance between *left* and *right*, or 0 for a leaf.
@@ -316,7 +322,8 @@ one vector). Every distance must be finite. Each node has these properties:
 * *index*: for a leaf, the index of its vector in *vectors*. Merged clusters are
   numbered from *n* (the number of vectors) in the order they are merged, as in
   SciPy.
-* *centroid*: the mean of the vectors in the cluster.
+* *centroid*: the mean of the vectors in the cluster, or null unless every
+  value in *vectors* is a finite number.
 
 ```javascript
 const root = hcluster([[1], [2], [5]], {linkage: "average"});

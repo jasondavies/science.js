@@ -1,3 +1,4 @@
+import { largestMagnitude, powerOfTwoNear, scaledNorm } from "../numeric.js";
 import { requireSquareMatrix } from "../validate.js";
 
 // The eigendecomposition of a square matrix, based on JAMA
@@ -8,10 +9,7 @@ import { requireSquareMatrix } from "../validate.js";
 // eigenvalues at positions i and i + 1, columns i and i + 1 hold the real and
 // imaginary parts of the eigenvector for the eigenvalue at position i.
 export function eigen(a) {
-  const n = requireSquareMatrix(a, "a"),
-        V = Array.from({length: n}, () => new Array(n).fill(0)),
-        d = new Array(n).fill(0),
-        e = new Array(n).fill(0);
+  const n = requireSquareMatrix(a, "a");
 
   let symmetric = true;
   for (let i = 0; i < n && symmetric; i++) {
@@ -23,10 +21,30 @@ export function eigen(a) {
     }
   }
 
-  // Scale by a power of 2, which is exact, so that very large or small entries
-  // neither overflow nor underflow; the eigenvalues are scaled back at the end.
-  const max = largestMagnitude(a),
-        scale = max > 0 ? Math.pow(2, Math.round(Math.log2(max))) : 1,
+  // Decompose the matrix as it is, which is exact for entries of widely
+  // different magnitudes. If that overflows or fails to converge, as it can for
+  // very large or small entries, decompose it again scaled by a power of 2,
+  // which is exact, and scale the eigenvalues back.
+  let result;
+  try {
+    result = decompose(a, symmetric, 1);
+  } catch (error) {
+    if (!(error instanceof ConvergenceError)) throw error;
+  }
+  if (!result || !allFinite(result)) {
+    const max = largestMagnitude(a);
+    if (max > 0) result = decompose(a, symmetric, powerOfTwoNear(max));
+  }
+  return result;
+}
+
+class ConvergenceError extends Error {}
+
+function decompose(a, symmetric, scale) {
+  const n = a.length,
+        V = Array.from({length: n}, () => new Array(n).fill(0)),
+        d = new Array(n).fill(0),
+        e = new Array(n).fill(0),
         scaled = a.map((row) => Array.from(row, (v) => v / scale));
 
   if (symmetric) {
@@ -43,15 +61,9 @@ export function eigen(a) {
   return {values: d.map((v) => v * scale), imaginary: e.map((v) => v * scale), vectors: V};
 }
 
-// The largest magnitude in the matrix a. This is a separate function because,
-// inlined in eigen, the loop made the decomposition about 20% slower.
-function largestMagnitude(a) {
-  let max = 0;
-  for (let i = 0; i < a.length; i++) {
-    const row = a[i];
-    for (let j = 0; j < row.length; j++) max = Math.max(max, Math.abs(row[j]));
-  }
-  return max;
+function allFinite({values, imaginary, vectors}) {
+  const finite = (v) => Number.isFinite(v);
+  return values.every(finite) && imaginary.every(finite) && vectors.every((row) => row.every(finite));
 }
 
 // Scales each eigenvector to unit length, as LAPACK does; the two columns
@@ -61,15 +73,15 @@ function largestMagnitude(a) {
 function normalizeVectors(e, V) {
   const n = V.length;
   for (let j = 0; j < n; j++) {
-    const columns = e[j] > 0 ? [j, j + 1] : [j];
-    let max = 0,
-        s = 0;
-    for (const c of columns) for (let i = 0; i < n; i++) max = Math.max(max, Math.abs(V[i][c]));
-    if (max === 0) continue;
-    for (const c of columns) for (let i = 0; i < n; i++) s += (V[i][c] / max) ** 2;
-    const length = max * Math.sqrt(s);
-    for (const c of columns) for (let i = 0; i < n; i++) V[i][c] /= length;
-    if (e[j] > 0) j++;
+    const pair = e[j] > 0,
+        length = scaledNorm(pair ? 2 * n : n, (i) => i < n ? V[i][j] : V[i - n][j + 1]);
+    if (length > 0) {
+      for (let i = 0; i < n; i++) {
+        V[i][j] /= length;
+        if (pair) V[i][j + 1] /= length;
+      }
+    }
+    if (pair) j++;
   }
 }
 
@@ -198,7 +210,7 @@ function tql2(d, e, V) {
     if (m > l) {
       var iter = 0;
       do {
-        if (++iter > maxIterations(n)) throw new Error("The eigendecomposition did not converge.");
+        if (++iter > maxIterations(n)) throw new ConvergenceError("The eigendecomposition did not converge.");
 
         // Compute implicit shift
         var g = d[l];
@@ -496,7 +508,7 @@ function hqr2(d, e, H, V) {
         }
       }
 
-      if (++iter > maxIterations(nn)) throw new Error("The eigendecomposition did not converge.");
+      if (++iter > maxIterations(nn)) throw new ConvergenceError("The eigendecomposition did not converge.");
 
       // Look for two consecutive small sub-diagonal elements
       var m = n-2;
@@ -610,7 +622,16 @@ function hqr2(d, e, H, V) {
         } else {
           l = i;
           if (e[i] === 0) {
-            H[i][n] = -r / (w !== 0 ? w : eps * norm);
+            const denominator = w !== 0 ? w : eps * norm;
+            // If the division would overflow, first rescale the part of the
+            // vector computed so far (as LAPACK does); eigenvectors can be
+            // scaled freely.
+            if (Math.abs(r) > Math.abs(denominator) * 1e300) {
+              const f = 1 / Math.abs(r);
+              for (var j = i + 1; j <= n; j++) H[j][n] *= f;
+              r *= f;
+            }
+            H[i][n] = -r / denominator;
           } else {
             // Solve real equations
             x = H[i][i + 1];

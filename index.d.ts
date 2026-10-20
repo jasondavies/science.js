@@ -42,7 +42,11 @@ export interface Eigendecomposition {
   values: number[];
   /** The imaginary parts of the eigenvalues. */
   imaginary: number[];
-  /** A matrix whose columns are the eigenvectors, each of unit length. */
+  /**
+   * A matrix whose columns are the eigenvectors, each of unit length; for a
+   * complex pair, the two columns holding its real and imaginary parts have
+   * unit length together.
+   */
   vectors: number[][];
 }
 export function eigen(a: Matrix): Eigendecomposition;
@@ -138,12 +142,16 @@ export interface ClusterNode {
   depth: number;
   /** For a leaf, the index of its vector; merged clusters are numbered from n in merge order. */
   index: number;
-  /** The mean of the vectors in the cluster. */
-  centroid: number[];
+  /** The mean of the vectors in the cluster, or null unless every value is a finite number. */
+  centroid: number[] | null;
 }
-export function hcluster(vectors: Matrix, options?: {
+/**
+ * Clusters vectors of any values that the distance function accepts, such as
+ * booleans with distances.jaccard. The distance function must be symmetric.
+ */
+export function hcluster<T = number>(vectors: ArrayLike<ArrayLike<T>>, options?: {
   linkage?: "single" | "complete" | "average";
-  distance?: DistanceFunction;
+  distance?: (a: ArrayLike<T>, b: ArrayLike<T>) => number;
 }): ClusterNode;
 
 // Smoothing.

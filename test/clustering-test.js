@@ -131,3 +131,30 @@ test("hcluster depth is the height of the node in merges", () => {
   assert.equal(root.left.depth, 1);
   assert.equal(root.left.left.depth, 0);
 });
+
+test("distances neither overflow nor underflow", () => {
+  assert.equal(distances.euclidean([1e200], [-1e200]), 2e200);
+  assert.equal(distances.euclidean([3e-200, 0], [0, 4e-200]), 5e-200);
+  assert.equal(distances.minkowski(1000)([0, 0], [3, 4]), 4);
+  assert.inDelta(distances.braycurtis([1e308, 1e308], [1e308, 0]), 1 / 3, 1e-15);
+  assert.equal(hcluster([[1e200], [-1e200]]).height, 2e200);
+});
+
+test("hcluster accepts vectors of any values that the distance accepts", () => {
+  const booleans = hcluster([[true, false, true], [false, true, true], [true, false, false]], {distance: distances.jaccard});
+  assert.equal(booleans.size, 3);
+  assert.equal(booleans.centroid, null);
+  assert.equal(booleans.left.left.centroid, null);
+  const strings = hcluster([["a", "b"], ["a", "c"], ["x", "y"]], {distance: distances.hamming});
+  assert.equal(strings.height, 2);
+  assert.deepEqual([strings.left.left.index, strings.left.right.index].sort(), [0, 1]);
+  assert.throws(() => hcluster([["a"], ["b"]]), {name: "RangeError"});
+  assert.throws(() => kmeans([["a"], ["b"]], {k: 1}), {name: "TypeError"});
+});
+
+test("random sources must return numbers in [0, 1)", () => {
+  for (const random of [() => -.1, () => 1, () => 1.5, () => NaN]) {
+    assert.throws(() => kmeans([[0], [1]], {k: 2, random}), {name: "RangeError"});
+  }
+  assert.throws(() => kmeans([[0], [1]], {k: 1, random: 5}), {name: "TypeError"});
+});

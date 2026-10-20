@@ -112,6 +112,25 @@ var science = (() => {
     if (!Number.isFinite(d2)) throw new RangeError(`The distance between two vectors is ${d2}; distances must be finite.`);
     return d2;
   }
+  function requireRows(rows, name) {
+    requireArray(rows, name);
+    if (!rows.length) throw new RangeError(`${name} must not be empty.`);
+    let numeric = true;
+    for (let i = 0; i < rows.length; i++) {
+      requireArray(rows[i], `Each element of ${name}`);
+      if (rows[i].length !== rows[0].length) throw new RangeError(`All elements of ${name} must have the same length.`);
+      for (let j = 0; j < rows[i].length && numeric; j++) numeric = Number.isFinite(rows[i][j]);
+    }
+    return [rows.length, numeric];
+  }
+  function checkedRandom(random, name = "random") {
+    requireFunction(random, name);
+    return () => {
+      const r = random();
+      if (!(r >= 0 && r < 1)) throw new RangeError(`${name} must return numbers in [0, 1), but returned ${r}.`);
+      return r;
+    };
+  }
 
   // src/quadratic.js
   function quadratic(a2, b2, c2, options) {
@@ -120,25 +139,39 @@ var science = (() => {
       throw new TypeError("Coefficients must be finite numbers.");
     }
     const real = (roots) => complex ? roots.map((re) => ({ re, im: 0 })) : roots;
-    const max = Math.max(Math.abs(a2), Math.abs(b2), Math.abs(c2));
-    if (max > 1e150 || max < 1e-150 && max > 0) {
-      const scale = Math.pow(2, -Math.round(Math.log2(max)));
-      a2 *= scale;
-      b2 *= scale;
-      c2 *= scale;
-    }
     if (a2 === 0) {
       return real(b2 === 0 ? [] : [-c2 / b2 + 0]);
     }
-    const d2 = b2 * b2 - 4 * a2 * c2, rb = -b2 / (2 * a2) + 0;
+    const h = b2 / 2, g = Math.sqrt(Math.abs(a2)) * Math.sqrt(Math.abs(c2)), s = Math.max(Math.abs(h), g), hs = h / s, gs = g / s, acSign = a2 < 0 !== c2 < 0 ? -1 : 1, d2 = s === 0 ? 0 : hs * hs - acSign * gs * gs, rb = -h / a2 + 0;
     if (d2 > 0) {
-      const q = -(b2 + (b2 < 0 ? -1 : 1) * Math.sqrt(d2)) / 2, r1 = q / a2 + 0, r2 = c2 / q + 0;
+      const q = -(h + (h < 0 ? -1 : 1) * s * Math.sqrt(d2)), r1 = q / a2 + 0, r2 = c2 / q + 0;
       return real(r1 < r2 ? [r1, r2] : [r2, r1]);
     }
     if (d2 === 0) return real([rb]);
     if (!complex) return [];
-    const im = Math.sqrt(-d2) / (2 * Math.abs(a2));
+    const im = s * Math.sqrt(-d2) / Math.abs(a2);
     return [{ re: rb, im: -im }, { re: rb, im }];
+  }
+
+  // src/numeric.js
+  function largestMagnitude(m) {
+    let max = 0;
+    for (let i = 0; i < m.length; i++) {
+      const row = m[i];
+      for (let j = 0; j < row.length; j++) max = Math.max(max, Math.abs(row[j]));
+    }
+    return max;
+  }
+  function powerOfTwoNear(x) {
+    return Math.pow(2, Math.max(-1022, Math.min(1023, Math.round(Math.log2(x)))));
+  }
+  function scaledNorm(n, value, p = 2) {
+    let max = 0;
+    for (let i = 0; i < n; i++) max = Math.max(max, Math.abs(value(i)));
+    if (max === 0 || max === Infinity) return max;
+    let s = 0;
+    for (let i = 0; i < n; i++) s += Math.pow(Math.abs(value(i)) / max, p);
+    return max * Math.pow(s, 1 / p);
   }
 
   // src/linalg/vector.js
@@ -162,15 +195,7 @@ var science = (() => {
   }
   function norm(a2) {
     requireFiniteNumbers(a2, "a");
-    let max = 0;
-    for (let i = 0; i < a2.length; i++) max = Math.max(max, Math.abs(a2[i]));
-    if (max === 0) return 0;
-    let s = 0;
-    for (let i = 0; i < a2.length; i++) {
-      const x = a2[i] / max;
-      s += x * x;
-    }
-    return max * Math.sqrt(s);
+    return scaledNorm(a2.length, (i) => a2[i]);
   }
   function normalize(a2) {
     const length = norm(a2);
@@ -211,10 +236,9 @@ var science = (() => {
     }
     return ab;
   }
-  function lu(a2) {
-    const n = a2.length, m = a2.map((row) => Array.from(row)), permutation = Array.from({ length: n }, (_, i) => i);
-    let sign = 1, max = 0;
-    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) max = Math.max(max, Math.abs(m[i][j]));
+  function lu(m) {
+    const n = m.length, permutation = Array.from({ length: n }, (_, i) => i);
+    let sign = 1;
     for (let k = 0; k < n; k++) {
       let p = k;
       for (let i = k + 1; i < n; i++) if (Math.abs(m[i][k]) > Math.abs(m[p][k])) p = i;
@@ -229,40 +253,60 @@ var science = (() => {
         for (let j = k + 1; j < n; j++) m[i][j] -= f * m[k][j];
       }
     }
-    return { m, permutation, sign, max };
+    return { permutation, sign };
   }
   function determinant(a2) {
-    const n = requireSquareMatrix(a2, "a"), { m, sign } = lu(a2);
+    const n = requireSquareMatrix(a2, "a"), m = a2.map((row) => Array.from(row)), { sign } = lu(m);
     let d2 = sign;
     for (let i = 0; i < n; i++) d2 *= m[i][i];
     return d2 + 0;
   }
+  function equilibrate(a2) {
+    const n = a2.length, m = a2.map((row) => Array.from(row)), rows = new Array(n), columns = new Array(n);
+    for (let i = 0; i < n; i++) {
+      const max = largestMagnitude([m[i]]);
+      if (max === 0) return null;
+      rows[i] = 1 / powerOfTwoNear(max);
+      for (let j = 0; j < n; j++) m[i][j] *= rows[i];
+    }
+    for (let j = 0; j < n; j++) {
+      let max = 0;
+      for (let i = 0; i < n; i++) max = Math.max(max, Math.abs(m[i][j]));
+      if (max === 0) return null;
+      columns[j] = 1 / powerOfTwoNear(max);
+      for (let i = 0; i < n; i++) m[i][j] *= columns[j];
+    }
+    return { m, rows, columns };
+  }
   function solve(a2, b2) {
     const n = requireSquareMatrix(a2, "a");
     requireArray(b2, "b");
-    const vector = !b2.length || typeof b2[0] === "number", columns = vector ? 1 : requireMatrix(b2, "b")[1];
+    const vector = !b2.length || typeof b2[0] === "number", width = vector ? 1 : requireMatrix(b2, "b")[1];
     if (vector) requireFiniteNumbers(b2, "b");
     if (b2.length !== n) throw new RangeError(`b must have ${n} rows.`);
-    const { m, permutation, max } = lu(a2), tolerance = n * Number.EPSILON * max;
+    const equilibrated = equilibrate(a2);
+    if (!equilibrated) throw new RangeError("Matrix is singular.");
+    const { m, rows, columns } = equilibrated, { permutation } = lu(m), tolerance = n * Number.EPSILON;
     for (let i = 0; i < n; i++) {
       if (!(Math.abs(m[i][i]) > tolerance)) throw new RangeError("Matrix is singular.");
     }
     const x = new Array(n);
     for (let i = 0; i < n; i++) {
-      const xi = x[i] = vector ? [b2[permutation[i]]] : Array.from(b2[permutation[i]]), mi = m[i];
+      const p = permutation[i], xi = x[i] = vector ? [b2[p] * rows[p]] : Array.from(b2[p], (v) => v * rows[p]), mi = m[i];
       for (let k = 0; k < i; k++) {
         const f = mi[k], xk = x[k];
-        if (f !== 0) for (let c2 = 0; c2 < columns; c2++) xi[c2] -= f * xk[c2];
+        if (f !== 0) for (let c2 = 0; c2 < width; c2++) xi[c2] -= f * xk[c2];
       }
     }
     for (let i = n - 1; i >= 0; i--) {
       const xi = x[i], mi = m[i];
       for (let k = i + 1; k < n; k++) {
         const f = mi[k], xk = x[k];
-        if (f !== 0) for (let c2 = 0; c2 < columns; c2++) xi[c2] -= f * xk[c2];
+        if (f !== 0) for (let c2 = 0; c2 < width; c2++) xi[c2] -= f * xk[c2];
       }
-      for (let c2 = 0; c2 < columns; c2++) xi[c2] /= mi[i];
+      for (let c2 = 0; c2 < width; c2++) xi[c2] /= mi[i];
     }
+    for (let i = 0; i < n; i++) for (let c2 = 0; c2 < width; c2++) x[i][c2] *= columns[i];
     return vector ? x.map((row) => row[0]) : x;
   }
   function inverse(a2) {
@@ -300,7 +344,7 @@ var science = (() => {
 
   // src/linalg/eigen.js
   function eigen(a2) {
-    const n = requireSquareMatrix(a2, "a"), V = Array.from({ length: n }, () => new Array(n).fill(0)), d2 = new Array(n).fill(0), e = new Array(n).fill(0);
+    const n = requireSquareMatrix(a2, "a");
     let symmetric = true;
     for (let i = 0; i < n && symmetric; i++) {
       for (let j = 0; j < i; j++) {
@@ -310,7 +354,22 @@ var science = (() => {
         }
       }
     }
-    const max = largestMagnitude(a2), scale = max > 0 ? Math.pow(2, Math.round(Math.log2(max))) : 1, scaled = a2.map((row) => Array.from(row, (v) => v / scale));
+    let result;
+    try {
+      result = decompose(a2, symmetric, 1);
+    } catch (error) {
+      if (!(error instanceof ConvergenceError)) throw error;
+    }
+    if (!result || !allFinite(result)) {
+      const max = largestMagnitude(a2);
+      if (max > 0) result = decompose(a2, symmetric, powerOfTwoNear(max));
+    }
+    return result;
+  }
+  var ConvergenceError = class extends Error {
+  };
+  function decompose(a2, symmetric, scale) {
+    const n = a2.length, V = Array.from({ length: n }, () => new Array(n).fill(0)), d2 = new Array(n).fill(0), e = new Array(n).fill(0), scaled = a2.map((row) => Array.from(row, (v) => v / scale));
     if (symmetric) {
       for (let i = 0; i < n; i++) V[i] = scaled[i];
       tred2(d2, e, V);
@@ -323,25 +382,21 @@ var science = (() => {
     }
     return { values: d2.map((v) => v * scale), imaginary: e.map((v) => v * scale), vectors: V };
   }
-  function largestMagnitude(a2) {
-    let max = 0;
-    for (let i = 0; i < a2.length; i++) {
-      const row = a2[i];
-      for (let j = 0; j < row.length; j++) max = Math.max(max, Math.abs(row[j]));
-    }
-    return max;
+  function allFinite({ values, imaginary, vectors }) {
+    const finite = (v) => Number.isFinite(v);
+    return values.every(finite) && imaginary.every(finite) && vectors.every((row) => row.every(finite));
   }
   function normalizeVectors(e, V) {
     const n = V.length;
     for (let j = 0; j < n; j++) {
-      const columns = e[j] > 0 ? [j, j + 1] : [j];
-      let max = 0, s = 0;
-      for (const c2 of columns) for (let i = 0; i < n; i++) max = Math.max(max, Math.abs(V[i][c2]));
-      if (max === 0) continue;
-      for (const c2 of columns) for (let i = 0; i < n; i++) s += (V[i][c2] / max) ** 2;
-      const length = max * Math.sqrt(s);
-      for (const c2 of columns) for (let i = 0; i < n; i++) V[i][c2] /= length;
-      if (e[j] > 0) j++;
+      const pair = e[j] > 0, length = scaledNorm(pair ? 2 * n : n, (i) => i < n ? V[i][j] : V[i - n][j + 1]);
+      if (length > 0) {
+        for (let i = 0; i < n; i++) {
+          V[i][j] /= length;
+          if (pair) V[i][j + 1] /= length;
+        }
+      }
+      if (pair) j++;
     }
   }
   function maxIterations(n) {
@@ -439,7 +494,7 @@ var science = (() => {
       if (m > l) {
         var iter = 0;
         do {
-          if (++iter > maxIterations(n)) throw new Error("The eigendecomposition did not converge.");
+          if (++iter > maxIterations(n)) throw new ConvergenceError("The eigendecomposition did not converge.");
           var g = d2[l];
           var p = (d2[l + 1] - g) / (2 * e[l]);
           var r = Math.hypot(p, 1);
@@ -655,7 +710,7 @@ var science = (() => {
             x = y = w = 0.964;
           }
         }
-        if (++iter > maxIterations(nn)) throw new Error("The eigendecomposition did not converge.");
+        if (++iter > maxIterations(nn)) throw new ConvergenceError("The eigendecomposition did not converge.");
         var m = n - 2;
         while (m >= l) {
           z = H[m][m];
@@ -757,7 +812,13 @@ var science = (() => {
           } else {
             l = i;
             if (e[i] === 0) {
-              H[i][n] = -r / (w !== 0 ? w : eps * norm2);
+              const denominator = w !== 0 ? w : eps * norm2;
+              if (Math.abs(r) > Math.abs(denominator) * 1e300) {
+                const f = 1 / Math.abs(r);
+                for (var j = i + 1; j <= n; j++) H[j][n] *= f;
+                r *= f;
+              }
+              H[i][n] = -r / denominator;
             } else {
               x = H[i][i + 1];
               y = H[i + 1][i];
@@ -860,36 +921,57 @@ var science = (() => {
   }
 
   // src/stats/summary.js
+  function requireNumber(v) {
+    if (typeof v !== "number") throw new TypeError("values must contain only numbers.");
+  }
   function mean(values) {
     requireArray(values, "values");
     const n = values.length;
     if (n === 0) return NaN;
     let sum = 0;
-    for (let i = 0; i < n; i++) sum += values[i];
-    if (Number.isFinite(sum)) return sum / n;
-    for (let i = 0; i < n; i++) if (!Number.isFinite(values[i])) return sum / n;
+    for (let i = 0; i < n; i++) {
+      const v = values[i];
+      requireNumber(v);
+      sum += v;
+    }
+    if (Number.isFinite(sum) || !allFinite2(values)) return sum / n;
     let m = 0;
-    for (let i = 0; i < n; i++) m += (values[i] - m) / (i + 1);
+    for (let i = 0; i < n; i++) m += values[i] / n;
     return m;
   }
   function variance(values) {
     requireArray(values, "values");
     const n = values.length;
     if (n < 2) return NaN;
+    for (let i = 0; i < n; i++) requireNumber(values[i]);
+    const v = welford(values, 1);
+    if (Number.isFinite(v) || !allFinite2(values)) return v;
+    let max = 0;
+    for (let i = 0; i < n; i++) max = Math.max(max, Math.abs(values[i]));
+    const scale = powerOfTwoNear(max);
+    return welford(values, scale) * scale * scale;
+  }
+  function welford(values, scale) {
     let m = 0, s = 0;
-    for (let i = 0; i < n; i++) {
-      const d2 = values[i] - m;
+    for (let i = 0; i < values.length; i++) {
+      const x = values[i] / scale, d2 = x - m;
       m += d2 / (i + 1);
-      s += d2 * (values[i] - m);
+      s += d2 * (x - m);
     }
-    return s / (n - 1);
+    return s / (values.length - 1);
+  }
+  function allFinite2(values) {
+    for (let i = 0; i < values.length; i++) if (!Number.isFinite(values[i])) return false;
+    return true;
   }
   function standardDeviation(values) {
     return Math.sqrt(variance(values));
   }
   function sorted(values) {
     requireArray(values, "values");
-    return Array.from(values).sort((a2, b2) => a2 - b2);
+    const s = Array.from(values);
+    for (let i = 0; i < s.length; i++) requireNumber(s[i]);
+    return s.sort((a2, b2) => a2 - b2);
   }
   function quantileSorted(s, p) {
     const n = s.length;
@@ -1054,8 +1136,7 @@ var science = (() => {
         return mean2 + sd * standardQuantile(p);
       },
       sample(random = Math.random) {
-        requireFunction(random, "random");
-        return mean2 + sd * standardSample(random);
+        return mean2 + sd * standardSample(checkedRandom(random));
       }
     });
   }
@@ -1086,11 +1167,13 @@ var science = (() => {
   }
   function standardSample(random) {
     let x, y, s;
-    do {
+    for (let attempts = 0; ; attempts++) {
+      if (attempts === 1e3) throw new RangeError("random does not appear to return uniform random numbers.");
       x = 2 * random() - 1;
       y = 2 * random() - 1;
       s = x * x + y * y;
-    } while (s >= 1 || s === 0);
+      if (s < 1 && s !== 0) break;
+    }
     return x * Math.sqrt(-2 * Math.log(s) / s);
   }
 
@@ -1100,6 +1183,9 @@ var science = (() => {
     requireArray(b2, "b");
     requireSameLength(a2, b2);
   }
+  function safe(s) {
+    return s > 1e-290 && s < 1e290;
+  }
   var distances = Object.freeze({
     euclidean(a2, b2) {
       check(a2, b2);
@@ -1108,7 +1194,7 @@ var science = (() => {
         const x = a2[i] - b2[i];
         s += x * x;
       }
-      return Math.sqrt(s);
+      return safe(s) ? Math.sqrt(s) : scaledNorm(a2.length, (i) => a2[i] - b2[i]);
     },
     manhattan(a2, b2) {
       check(a2, b2);
@@ -1130,7 +1216,7 @@ var science = (() => {
         check(a2, b2);
         let s = 0;
         for (let i = 0; i < a2.length; i++) s += Math.pow(Math.abs(a2[i] - b2[i]), p);
-        return Math.pow(s, 1 / p);
+        return safe(s) ? Math.pow(s, 1 / p) : scaledNorm(a2.length, (i) => a2[i] - b2[i], p);
       };
     },
     // The number of positions at which a and b differ.
@@ -1159,6 +1245,16 @@ var science = (() => {
       for (let i = 0; i < a2.length; i++) {
         s0 += Math.abs(a2[i] - b2[i]);
         s1 += Math.abs(a2[i] + b2[i]);
+      }
+      if (Number.isFinite(s0) && Number.isFinite(s1)) return s0 / s1;
+      let max = 0;
+      for (let i = 0; i < a2.length; i++) max = Math.max(max, Math.abs(a2[i]), Math.abs(b2[i]));
+      if (!Number.isFinite(max)) return s0 / s1;
+      const scale = powerOfTwoNear(max);
+      s0 = s1 = 0;
+      for (let i = 0; i < a2.length; i++) {
+        s0 += Math.abs(a2[i] / scale - b2[i] / scale);
+        s1 += Math.abs(a2[i] / scale + b2[i] / scale);
       }
       return s0 / s1;
     }
@@ -1236,12 +1332,12 @@ var science = (() => {
 
   // src/stats/kmeans.js
   function kmeans(vectors, options) {
-    const { k, distance = distances.euclidean, maxIterations: maxIterations2 = 1e3, random = Math.random } = checkOptions(options, ["k", "distance", "maxIterations", "random"], "kmeans");
+    const { k, distance = distances.euclidean, maxIterations: maxIterations2 = 1e3, random: source = Math.random } = checkOptions(options, ["k", "distance", "maxIterations", "random"], "kmeans");
     const [n, dimensions] = requireMatrix(vectors, "vectors");
     if (!(Number.isInteger(k) && k >= 1)) throw new RangeError("k must be a positive integer.");
     if (!(Number.isInteger(maxIterations2) && maxIterations2 >= 1)) throw new RangeError("maxIterations must be a positive integer.");
     requireFunction(distance, "distance");
-    requireFunction(random, "random");
+    const random = checkedRandom(source);
     if (distinctCount(vectors, k) < k) throw new RangeError("There are fewer distinct vectors than clusters.");
     let centroids = initialCentroids(vectors, k, distance, random), assignments = new Array(n).fill(-1), iterations = 0, changed = true;
     while (changed && iterations < maxIterations2) {
@@ -1307,10 +1403,10 @@ var science = (() => {
       throw new RangeError(`Unknown linkage: ${linkage}`);
     }
     requireFunction(distance, "distance");
-    const n = requireMatrix(vectors, "vectors")[0];
+    const [n, numeric] = requireRows(vectors, "vectors");
     const clusters = [], distMatrix = [], dMin = [];
     for (let i = 0; i < n; i++) {
-      clusters[i] = { left: null, right: null, height: 0, size: 1, depth: 0, index: i, centroid: Array.from(vectors[i]) };
+      clusters[i] = { left: null, right: null, height: 0, size: 1, depth: 0, index: i, centroid: numeric ? Array.from(vectors[i]) : null };
     }
     if (n === 1) return clusters[0];
     for (let i = 0; i < n; i++) {
@@ -1336,7 +1432,7 @@ var science = (() => {
         size: left.size + right.size,
         depth: 1 + Math.max(left.depth, right.depth),
         index: n + p,
-        centroid: mergeCentroids(left, right)
+        centroid: numeric ? mergeCentroids(left, right) : null
       };
       for (let j = 0; j < n; j++) {
         if (j === c1 || j === c2) continue;

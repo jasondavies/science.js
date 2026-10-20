@@ -1,5 +1,5 @@
 import { distances } from "./distances.js";
-import { checkOptions, finiteDistance, requireMatrix, requireFunction } from "../validate.js";
+import { checkOptions, finiteDistance, requireRows, requireFunction } from "../validate.js";
 
 // Agglomerative hierarchical clustering. Returns the root of the binary tree
 // of merged clusters.
@@ -9,7 +9,9 @@ export function hcluster(vectors, options) {
     throw new RangeError(`Unknown linkage: ${linkage}`);
   }
   requireFunction(distance, "distance");
-  const n = requireMatrix(vectors, "vectors")[0];
+  // Vectors can contain any values that the distance function accepts, but
+  // centroids are only computed for vectors of numbers.
+  const [n, numeric] = requireRows(vectors, "vectors");
 
   // Leaves are numbered 0 to n - 1 in input order, and merged clusters n, n + 1,
   // ... in the order they are created.
@@ -17,7 +19,7 @@ export function hcluster(vectors, options) {
         distMatrix = [],
         dMin = [];
   for (let i = 0; i < n; i++) {
-    clusters[i] = {left: null, right: null, height: 0, size: 1, depth: 0, index: i, centroid: Array.from(vectors[i])};
+    clusters[i] = {left: null, right: null, height: 0, size: 1, depth: 0, index: i, centroid: numeric ? Array.from(vectors[i]) : null};
   }
   if (n === 1) return clusters[0];
 
@@ -51,7 +53,7 @@ export function hcluster(vectors, options) {
       size: left.size + right.size,
       depth: 1 + Math.max(left.depth, right.depth),
       index: n + p,
-      centroid: mergeCentroids(left, right)
+      centroid: numeric ? mergeCentroids(left, right) : null
     };
 
     // Update the distances to the merged cluster, which replaces c1.

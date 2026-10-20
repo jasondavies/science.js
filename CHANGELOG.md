@@ -37,7 +37,12 @@ below. Changes before 2.0.0 are recorded only in the git history.
 * **Eigenvectors of non-symmetric matrices are normalised** to unit length, as
   in LAPACK.
 * **Distance functions must return finite values** in `kmeans` and `hcluster`,
-  which throw a `RangeError` otherwise, as SciPy does.
+  which throw a `RangeError` otherwise, as SciPy does. `hcluster` assumes that
+  distances are symmetric (computing each one once), and `kmeans` calls its
+  distance function as `distance(vector, centroid)`, the reverse of 1.x.
+* **hcluster accepts vectors of any values** that the distance function
+  accepts, such as booleans with the Jaccard distance; the nodes' centroids are
+  then null. kmeans still needs numbers.
 * **Results change** where 1.x was wrong; see Fixed below.
 
 ### Added
@@ -129,7 +134,7 @@ below. Changes before 2.0.0 are recorded only in the git history.
 | `science.lin.determinant(m)` | `determinant(m)`, for any square matrix |
 | `science.lin.inverse(m)` | `inverse(m)`, which throws for a singular matrix |
 | `science.lin.gaussjordan(m)` | `solve(a, b)` |
-| `science.lin.tridag(a, b, c, d, x, n)` | `x = solveTridiagonal(lower, diagonal, upper, rhs)`, where `lower` and `upper` have *n* − 1 elements |
+| `science.lin.tridag(a, b, c, d, x, n)` | `x = solveTridiagonal(a.slice(1, n), b, c.slice(0, n - 1), d)`: `lower` and `upper` have *n* − 1 elements, and `lower[i - 1]` is the coefficient that was `a[i]` |
 | `science.lin.decompose()(a)` returning `{D, V}` | `eigen(a)` returning `{values, imaginary, vectors}` |
 | `science.quadratic()(a, b, c)`, `.complex(true)` | `quadratic(a, b, c)`, `{complex: true}`; complex roots are `{re, im}` |
 | `science.EULER` | `EULER_GAMMA` |
