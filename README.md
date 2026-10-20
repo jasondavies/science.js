@@ -1,684 +1,523 @@
 # Science.js
 
-Science.js is a JavaScript library for scientific and statistical computing.
-
-Currently, there are two modules:
-
- * `science.stats`, containing various implementations of statistical methods
-   similar to those provided by [R](http://www.r-project.org/);
- * `science.lin`, for linear algebra.
+Science.js is a JavaScript library for scientific and statistical computing:
+summary statistics, distributions, kernel density estimation, clustering,
+smoothing and linear algebra, with methods similar to those provided by
+[R](https://www.r-project.org/).
 
 ## Installation
 
     npm install science
 
-Then import it as an ES module:
+Science.js is an ES module, and works in Node.js 18 or later and in modern
+browsers. Import the functions you need:
 
 ```javascript
-import science from "science";
+import { mean, loess } from "science";
 ```
 
-The package is ESM-only. CommonJS code can still load it on Node.js 20.19+ or
-22.12+, where `require` supports ES modules:
+CommonJS code can load it on Node.js 20.19+ or 22.12+, where `require` supports
+ES modules:
 
 ```javascript
-const { science } = require("science");
+const { mean, loess } = require("science");
 ```
 
 In a browser, you can instead load `dist/science.min.js` with a `<script>` tag,
-which defines a global `science`.
+which defines a global `science` with the same functions, such as
+`science.mean`.
+
+Type definitions for TypeScript are included.
 
 ## API Reference
 
-* [Core](#core)
-* [Linear algebra](#linear-algebra)
 * [Summary statistics](#summary-statistics)
 * [Distributions](#distributions)
-* [Distances](#distances)
 * [Kernel density estimation](#kernel-density-estimation)
-* [Clustering](#clustering)
 * [Smoothing](#smoothing)
+* [Clustering](#clustering)
+* [Distances](#distances)
+* [Linear algebra](#linear-algebra)
+* [Other](#other)
 
-Configurable functions follow the same pattern as [D3](https://d3js.org/):
-calling the constructor returns a function, whose settings are changed by
-chained methods. Calling a setting method with no arguments returns its current
-value.
+Functions take arrays (or typed arrays) of numbers, and never modify their
+inputs. Optional settings are passed as an options object. Invalid input throws
+a `TypeError` (for a value of the wrong type) or a `RangeError` (for a value out
+of range, such as arrays of different lengths).
 
-Errors are thrown as plain objects of the form `{error: "message"}`, not as
-`Error` instances.
+### Summary statistics
 
-### Core
+<a name="mean" href="#mean">#</a> <b>mean</b>(<i>values</i>)
 
-<a name="version" href="#version">#</a> science.<b>version</b>
-
-The version of Science.js, such as `"2.0.0"`.
-
-<a name="EULER" href="#EULER">#</a> science.<b>EULER</b>
-
-The [Euler–Mascheroni constant](https://en.wikipedia.org/wiki/Euler%E2%80%93Mascheroni_constant), γ ≈ 0.5772156649015329.
-
-<a name="ascending" href="#ascending">#</a> science.<b>ascending</b>(<i>a</i>, <i>b</i>)
-
-A comparator for sorting numbers in ascending order, returning *a* − *b*.
+Returns the arithmetic mean of *values*, or NaN if it is empty. It is computed
+incrementally, so that large values do not overflow.
 
 ```javascript
-[3, 1, 2].sort(science.ascending); // [1, 2, 3]
+mean([1, 2, 3, 4]); // 2.5
 ```
 
-<a name="expm1" href="#expm1">#</a> science.<b>expm1</b>(<i>x</i>)
+<a name="median" href="#median">#</a> <b>median</b>(<i>values</i>)
 
-Returns *e*<sup>*x*</sup> − 1. When |*x*| < 1e-5, the second-order Taylor
-approximation *x* + *x*²/2 is used, to avoid the cancellation in
-`Math.exp(x) - 1`.
+Returns the median of *values*, or NaN if it is empty.
 
 ```javascript
-science.expm1(0); // 0
+median([3, 1, 4, 2]); // 2.5
 ```
 
-<a name="functor" href="#functor">#</a> science.<b>functor</b>(<i>value</i>)
+<a name="quantile" href="#quantile">#</a> <b>quantile</b>(<i>values</i>, <i>p</i>)
 
-If *value* is a function, returns it; otherwise returns a function that always
-returns *value*.
+Returns the *p*-quantile of *values*, where *p* is between 0 and 1, using linear
+interpolation between the sorted values (type 7 in R's `quantile`, its
+default). Returns NaN if *values* is empty.
 
 ```javascript
-science.functor(3)(); // 3
+quantile([1, 2, 3, 4], 0.25); // 1.75
 ```
 
-<a name="hypot" href="#hypot">#</a> science.<b>hypot</b>(<i>x</i>, <i>y</i>)
+<a name="quantiles" href="#quantiles">#</a> <b>quantiles</b>(<i>values</i>, <i>probabilities</i>)
 
-Returns √(*x*² + *y*²) without overflow or underflow in the intermediate
-values, using `Math.hypot`.
+Returns the quantile of *values* for each of the *probabilities*, sorting
+*values* only once.
 
 ```javascript
-science.hypot(3, 4); // 5
+quantiles([1, 2, 3, 4], [0, 0.5, 1]); // [1, 2.5, 4]
 ```
 
-<a name="quadratic" href="#quadratic">#</a> science.<b>quadratic</b>()
+<a name="iqr" href="#iqr">#</a> <b>iqr</b>(<i>values</i>)
 
-Constructs a solver for quadratic equations.
-
-<a name="_quadratic" href="#_quadratic">#</a> <i>quadratic</i>(<i>a</i>, <i>b</i>, <i>c</i>)
-
-Returns the roots of *a**x*² + *b**x* + *c* = 0 in ascending order: two roots,
-one (a repeated root), or none. If *a* is 0, the equation is solved as linear
-(*b**x* + *c* = 0), and if *b* is also 0, no roots are returned. The larger root
-is computed first to avoid loss of precision.
+Returns the interquartile range of *values*: the difference between its 0.75
+and 0.25 quantiles.
 
 ```javascript
-var quadratic = science.quadratic();
-quadratic(1, 1, -2); // [-2, 1]
-quadratic(1, -2, 1); // [1]
-quadratic(1, 0, 1); // []
-quadratic(0, 2, -4); // [2]
+iqr([1, 2, 3, 4]); // 1.5
 ```
 
-<a name="quadratic_complex" href="#quadratic_complex">#</a> <i>quadratic</i>.<b>complex</b>([<i>complex</i>])
+<a name="variance" href="#variance">#</a> <b>variance</b>(<i>values</i>)
 
-If *complex* is true, roots are returned as objects of the form `{r, i}` (real
-and imaginary parts), and complex roots are included, in ascending order of
-their imaginary parts. Defaults to false. If *complex* is not specified, returns
-the current setting.
+Returns the unbiased sample variance of *values* (with denominator *n* − 1), or
+NaN if there are fewer than two values. It uses Welford's algorithm, which is
+accurate even when the values are large compared with their spread.
 
 ```javascript
-science.quadratic().complex(true)(1, 0, 1); // [{r: 0, i: -1}, {r: 0, i: 1}]
+variance([1, 2, 3, 4]); // 1.6666666666666667
 ```
 
-<a name="zeroes" href="#zeroes">#</a> science.<b>zeroes</b>(<i>n</i>[, <i>m</i>, …])
+<a name="standardDeviation" href="#standardDeviation">#</a> <b>standardDeviation</b>(<i>values</i>)
 
-Returns an array of *n* zeroes. With more arguments, returns nested arrays: for
-example, `science.zeroes(n, m)` returns an *n* × *m* matrix of zeroes.
+Returns the sample standard deviation of *values*, the square root of its
+[variance](#variance).
 
 ```javascript
-science.zeroes(2, 3); // [[0, 0, 0], [0, 0, 0]]
+standardDeviation([2, 4, 4, 4, 5, 5, 7, 9]); // ≈ 2.1380899
+```
+
+<a name="modes" href="#modes">#</a> <b>modes</b>(<i>values</i>)
+
+Returns all of the most frequent values in *values*, in the order they first
+appear, or an empty array if *values* is empty. Values are compared as in a
+`Map`, so `1` and `"1"` are different values.
+
+```javascript
+modes([1, 2, 2, 3]); // [2]
+modes([3, 3, 1, 1, 2]); // [3, 1]
+```
+
+### Distributions
+
+<a name="normal" href="#normal">#</a> <b>normal</b>([<i>options</i>])
+
+Returns a [normal distribution](https://en.wikipedia.org/wiki/Normal_distribution)
+with the given *options*:
+
+* *mean*: the mean, which defaults to 0.
+* *sd*: the standard deviation, which must be positive and defaults to 1.
+
+The distribution is an object with these properties and methods:
+
+* *mean* and *sd*: the parameters.
+* *pdf*(*x*): the probability density at *x*.
+* *cdf*(*x*): the cumulative probability at *x*, accurate to about 1e-15
+  relative error, even far into the tails.
+* *quantile*(*p*): the inverse of *cdf*, for a probability *p* between 0 and 1.
+* *sample*([*random*]): a random number drawn from the distribution, using the
+  [Marsaglia polar method](https://en.wikipedia.org/wiki/Marsaglia_polar_method).
+  *random* is a source of uniform random numbers in [0, 1), which defaults to
+  `Math.random`; pass a seeded generator for reproducible samples.
+
+```javascript
+const heights = normal({mean: 170, sd: 10});
+heights.cdf(180); // ≈ 0.8413447
+heights.quantile(0.975); // ≈ 189.5996398
+normal().pdf(0); // ≈ 0.3989423
+```
+
+<a name="erf" href="#erf">#</a> <b>erf</b>(<i>x</i>)
+
+Returns the [error function](https://en.wikipedia.org/wiki/Error_function) at
+*x*, accurate to about 1e-15 relative error.
+
+```javascript
+erf(1); // ≈ 0.8427008
+```
+
+<a name="erfc" href="#erfc">#</a> <b>erfc</b>(<i>x</i>)
+
+Returns the complementary error function, 1 − erf(*x*), computed directly so
+that it stays accurate for large *x*, where 1 − erf(*x*) would round to 0.
+
+```javascript
+erfc(10); // ≈ 2.0884876e-45
+```
+
+### Kernel density estimation
+
+<a name="kde" href="#kde">#</a> <b>kde</b>(<i>sample</i>[, <i>options</i>])
+
+Returns the [kernel density estimate](https://en.wikipedia.org/wiki/Kernel_density_estimation)
+for the array *sample*, as a function that takes a value *x* and returns the
+estimated density there. Its *bandwidth* property is the bandwidth used. The
+*options* are:
+
+* *kernel*: the [kernel](#kernels) function, which defaults to
+  `kernels.gaussian`.
+* *bandwidth*: a positive number, or a function that is passed the sample and
+  returns one, such as one of the [bandwidth selectors](#bandwidths). Defaults
+  to `bandwidths.nrd0`, as in R's `density`.
+
+```javascript
+const density = kde([1, 2, 3, 4, 5], {bandwidth: 1});
+density(3); // ≈ 0.1981731
+density.bandwidth; // 1
+```
+
+<a name="kernels" href="#kernels">#</a> <b>kernels</b>
+
+[Kernel functions](https://en.wikipedia.org/wiki/Kernel_(statistics)#Kernel_functions_in_common_use),
+each of which takes a value *u* and returns its weight. All of them integrate to
+1, and all but the Gaussian are zero outside [−1, 1].
+
+* kernels.<b>uniform</b>: ½.
+* kernels.<b>triangular</b>: 1 − |*u*|.
+* kernels.<b>epanechnikov</b>: ¾(1 − *u*²).
+* kernels.<b>quartic</b>: (15/16)(1 − *u*²)².
+* kernels.<b>triweight</b>: (35/32)(1 − *u*²)³.
+* kernels.<b>gaussian</b>: *e*<sup>−*u*²/2</sup> / √(2π).
+* kernels.<b>cosine</b>: (π/4) cos(π*u*/2).
+
+```javascript
+kernels.epanechnikov(0); // 0.75
+```
+
+<a name="bandwidths" href="#bandwidths">#</a> <b>bandwidths</b>
+
+Bandwidth selectors for Gaussian kernels, matching R's `bw.nrd0` and `bw.nrd`.
+Each takes an array of at least two values and returns a bandwidth.
+
+* bandwidths.<b>nrd0</b>: Silverman's rule of thumb, 0.9 × min(*s*, IQR / 1.34)
+  × *n*<sup>−1/5</sup>, where *s* is the [standard deviation](#standardDeviation)
+  and IQR the [interquartile range](#iqr). If that minimum is 0, it falls back
+  to *s*, then to the absolute value of the first value, then to 1.
+* bandwidths.<b>nrd</b>: Scott's variation, 1.06 × min(*s*, IQR / 1.34) ×
+  *n*<sup>−1/5</sup>. Unlike nrd0, it is 0 when the interquartile range is 0,
+  such as when most values are repeated.
+
+```javascript
+bandwidths.nrd0([1, 4, 3, 2]); // ≈ 0.7635139
+bandwidths.nrd([1, 4, 3, 2]); // ≈ 0.8992498
+```
+
+### Smoothing
+
+<a name="loess" href="#loess">#</a> <b>loess</b>(<i>x</i>, <i>y</i>[, <i>options</i>])
+
+Smooths the points (*x*[*i*], *y*[*i*]) with
+[LOESS](https://en.wikipedia.org/wiki/Local_regression), returning the smoothed
+y value for each point. *x* and *y* must be arrays of finite numbers of the same
+length, and *x* must be sorted in ascending order (tied values are allowed). It
+follows R's `lowess`, and is accurate even for large x values such as
+timestamps. The *options* are:
+
+* *bandwidth*: the fraction of the points used for each local regression, which
+  must be greater than 0 and at most 1, and defaults to 0.3. Lower values follow
+  the data more closely; higher values give a smoother curve. With three or more
+  points, floor(*bandwidth* × *n*) must be at least 2: for example, the default
+  bandwidth needs at least 7 points.
+* *robustnessIterations*: the number of iterations after the initial fit that
+  reduce the weight of points with large residuals, making the curve less
+  sensitive to outliers. Must be a non-negative integer, and defaults to 2; use 0
+  for a plain locally weighted regression.
+* *accuracy*: the tolerance below which values are treated as zero, which
+  defaults to 1e-12. A local regression whose x values spread less than this
+  fits a flat line, and the robustness iterations stop once the median residual
+  falls below it.
+* *weights*: an array with a non-negative weight for each point, scaling its
+  influence. Points with a weight of 0 have no influence, but are still given a
+  smoothed value from their neighbours. At least one weight must be positive.
+  Defaults to all 1.
+
+```javascript
+loess([1, 2, 3, 4, 5], [2, 4, 6, 8, 10], {bandwidth: 0.6}); // [2, 4, 6, 8, 10]
+```
+
+### Clustering
+
+<a name="kmeans" href="#kmeans">#</a> <b>kmeans</b>(<i>vectors</i>, <i>options</i>)
+
+Clusters the array of *vectors* (arrays of numbers, all the same length) with
+[k-means](https://en.wikipedia.org/wiki/K-means_clustering), choosing the
+initial centroids with [k-means++](https://en.wikipedia.org/wiki/K-means%2B%2B)
+and iterating until the assignments stop changing. The *options* are:
+
+* *k*: the number of clusters, which is required. There must be at least *k*
+  distinct vectors.
+* *distance*: the [distance](#distances) function used to assign vectors to
+  centroids, which defaults to `distances.euclidean`.
+* *maxIterations*: the maximum number of iterations, which defaults to 1,000.
+* *random*: a source of uniform random numbers in [0, 1) for the initial
+  centroids, which defaults to `Math.random`; pass a seeded generator for
+  reproducible results.
+
+Returns an object with these properties:
+
+* *assignments*: the index of the cluster of each vector.
+* *centroids*: the mean of the vectors in each cluster.
+* *iterations*: the number of iterations performed.
+
+```javascript
+const {assignments} = kmeans([[0], [1], [10], [11]], {k: 2});
+assignments[0] === assignments[1]; // true
+assignments[0] === assignments[2]; // false
+```
+
+<a name="hcluster" href="#hcluster">#</a> <b>hcluster</b>(<i>vectors</i>[, <i>options</i>])
+
+Clusters the array of *vectors* (arrays of numbers, all the same length) with
+agglomerative [hierarchical clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering),
+repeatedly merging the two closest clusters. The *options* are:
+
+* *linkage*: how the distance between two clusters is computed from the
+  distances between their vectors: `"single"` (the smallest, the default),
+  `"complete"` (the largest) or `"average"` (the mean).
+* *distance*: the [distance](#distances) function between vectors, which
+  defaults to `distances.euclidean`.
+
+Returns the root of the binary tree of clusters. Each node has these
+properties:
+
+* *left* and *right*: the two merged clusters, or null for a leaf.
+* *height*: the linkage distance between *left* and *right*, or 0 for a leaf.
+* *size*: the number of vectors in the cluster.
+* *depth*: the number of merges below the node.
+* *index*: for a leaf, the index of its vector in *vectors*. Merged clusters are
+  numbered from *n* (the number of vectors) in the order they are merged, as in
+  SciPy.
+* *centroid*: the mean of the vectors in the cluster.
+
+```javascript
+const root = hcluster([[1], [2], [5]], {linkage: "average"});
+root.height; // 3.5
+root.left.height; // 1
+root.size; // 3
+```
+
+### Distances
+
+<a name="distances" href="#distances">#</a> <b>distances</b>
+
+Distance functions, each of which takes two arrays of the same length, for use
+with [kmeans](#kmeans) and [hcluster](#hcluster).
+
+* distances.<b>euclidean</b>: the
+  [Euclidean distance](https://en.wikipedia.org/wiki/Euclidean_distance).
+* distances.<b>manhattan</b>: the
+  [Manhattan distance](https://en.wikipedia.org/wiki/Taxicab_geometry), the sum
+  of the absolute differences.
+* distances.<b>chebyshev</b>: the
+  [Chebyshev distance](https://en.wikipedia.org/wiki/Chebyshev_distance), the
+  largest absolute difference.
+* distances.<b>minkowski</b>(*p*): returns the
+  [Minkowski distance](https://en.wikipedia.org/wiki/Minkowski_distance)
+  function of order *p*. Order 1 is the Manhattan distance, 2 the Euclidean and
+  Infinity the Chebyshev.
+* distances.<b>hamming</b>: the
+  [Hamming distance](https://en.wikipedia.org/wiki/Hamming_distance), the number
+  of positions at which the arrays differ.
+* distances.<b>jaccard</b>: the
+  [Jaccard distance](https://en.wikipedia.org/wiki/Jaccard_index) between the
+  arrays treated as sets, where a truthy value at position *i* means that *i* is
+  a member: 1 − |*a* ∩ *b*| / |*a* ∪ *b*|, or 0 if both are empty.
+* distances.<b>braycurtis</b>: the
+  [Bray–Curtis dissimilarity](https://en.wikipedia.org/wiki/Bray%E2%80%93Curtis_dissimilarity),
+  Σ|*a*<sub>*i*</sub> − *b*<sub>*i*</sub>| / Σ|*a*<sub>*i*</sub> + *b*<sub>*i*</sub>|,
+  for non-negative values.
+
+```javascript
+distances.euclidean([0, 0], [3, 4]); // 5
+distances.jaccard([1, 0, 1], [1, 1, 0]); // ≈ 0.6666667
 ```
 
 ### Linear algebra
 
 Vectors are arrays of numbers, and matrices are arrays of rows.
 
-<a name="lin_dot" href="#lin_dot">#</a> science.lin.<b>dot</b>(<i>a</i>, <i>b</i>)
+<a name="dot" href="#dot">#</a> <b>dot</b>(<i>a</i>, <i>b</i>)
 
-Returns the dot product of vectors *a* and *b*. If their lengths differ, the
-extra elements of the longer one are ignored.
-
-```javascript
-science.lin.dot([1, 2, 3], [4, 5, 6]); // 32
-```
-
-<a name="lin_cross" href="#lin_cross">#</a> science.lin.<b>cross</b>(<i>a</i>, <i>b</i>)
-
-Returns the cross product of three-dimensional vectors *a* and *b*.
+Returns the dot product of the vectors *a* and *b*, which must have the same
+length.
 
 ```javascript
-science.lin.cross([1, 0, 0], [0, 1, 0]); // [0, 0, 1]
+dot([1, 2, 3], [4, 5, 6]); // 32
 ```
 
-<a name="lin_length" href="#lin_length">#</a> science.lin.<b>length</b>(<i>a</i>)
+<a name="cross" href="#cross">#</a> <b>cross</b>(<i>a</i>, <i>b</i>)
 
-Returns the Euclidean length of vector *a*.
+Returns the cross product of the three-dimensional vectors *a* and *b*.
 
 ```javascript
-science.lin.length([3, 4]); // 5
+cross([1, 0, 0], [0, 1, 0]); // [0, 0, 1]
 ```
 
-<a name="lin_normalize" href="#lin_normalize">#</a> science.lin.<b>normalize</b>(<i>a</i>)
+<a name="norm" href="#norm">#</a> <b>norm</b>(<i>a</i>)
 
-Returns a new vector in the direction of *a* with length 1. A zero vector gives
-NaN elements.
+Returns the Euclidean length of the vector *a*, without overflow or underflow
+for very large or small values.
 
 ```javascript
-science.lin.normalize([3, 4]); // [0.6, 0.8]
+norm([3, 4]); // 5
 ```
 
-<a name="lin_transpose" href="#lin_transpose">#</a> science.lin.<b>transpose</b>(<i>a</i>)
+<a name="normalize" href="#normalize">#</a> <b>normalize</b>(<i>a</i>)
 
-Returns the transpose of matrix *a*.
+Returns the vector in the direction of *a* with length 1. Throws for a zero
+vector.
 
 ```javascript
-science.lin.transpose([[1, 2, 3], [4, 5, 6]]); // [[1, 4], [2, 5], [3, 6]]
+normalize([3, 4]); // [0.6, 0.8]
 ```
 
-<a name="lin_multiply" href="#lin_multiply">#</a> science.lin.<b>multiply</b>(<i>a</i>, <i>b</i>)
+<a name="transpose" href="#transpose">#</a> <b>transpose</b>(<i>a</i>)
 
-Returns the matrix product *a* × *b*. Throws if the number of columns of *a*
-differs from the number of rows of *b*. To multiply a matrix by a vector, pass
-the vector as a column, such as `[[x], [y]]`.
+Returns the transpose of the matrix *a*.
 
 ```javascript
-science.lin.multiply([[1, 2], [3, 4]], [[5], [6]]); // [[17], [39]]
+transpose([[1, 2, 3], [4, 5, 6]]); // [[1, 4], [2, 5], [3, 6]]
 ```
 
-<a name="lin_determinant" href="#lin_determinant">#</a> science.lin.<b>determinant</b>(<i>m</i>)
+<a name="multiply" href="#multiply">#</a> <b>multiply</b>(<i>a</i>, <i>b</i>)
 
-Returns the determinant of the 4 × 4 matrix *m*. Other sizes are not supported.
+Returns the product of the matrix *a* with *b*, which is either a matrix (giving
+a matrix) or a vector (giving a vector). The number of columns of *a* must equal
+the number of rows of *b*.
 
 ```javascript
-science.lin.determinant([[2, 0, 0, 0], [0, 3, 0, 0], [0, 0, 4, 0], [0, 0, 0, 5]]); // 120
+multiply([[1, 2], [3, 4]], [[5, 6], [7, 8]]); // [[19, 22], [43, 50]]
+multiply([[1, 2], [3, 4]], [5, 6]); // [17, 39]
 ```
 
-<a name="lin_inverse" href="#lin_inverse">#</a> science.lin.<b>inverse</b>(<i>m</i>)
+<a name="determinant" href="#determinant">#</a> <b>determinant</b>(<i>a</i>)
 
-Returns the inverse of the square matrix *m*, computed by
-[gaussjordan](#lin_gaussjordan) with the default tolerance. Returns undefined if
-*m* is not square or is singular (to within that tolerance). *m* is not modified.
+Returns the determinant of the square matrix *a*, computed by LU decomposition
+with partial pivoting.
 
 ```javascript
-science.lin.inverse([[4, 7], [2, 6]]); // [[0.6, -0.7], [-0.2, 0.4]]
-science.lin.inverse([[1, 2], [2, 4]]); // undefined
+determinant([[1, 2], [3, 4]]); // -2
 ```
 
-<a name="lin_gaussjordan" href="#lin_gaussjordan">#</a> science.lin.<b>gaussjordan</b>(<i>m</i>[, <i>eps</i>])
+<a name="solve" href="#solve">#</a> <b>solve</b>(<i>a</i>, <i>b</i>)
 
-Performs [Gauss–Jordan elimination](https://en.wikipedia.org/wiki/Gaussian_elimination)
-with partial pivoting in place on *m*, an *n* × *w* matrix with *w* ≥ *n*,
-typically a square matrix augmented with one or more right-hand sides. Returns
-true on success, in which case the left *n* × *n* block of *m* is the identity
-and the remaining columns hold the solutions. Returns false, leaving *m* partly
-reduced, if a pivot's magnitude is at most *eps*. If *eps* is not specified (or
-is 0), it defaults to *n* × `Number.EPSILON` × the largest magnitude in the left
-*n* × *n* block, so that the tolerance scales with the matrix.
+Solves the linear system *a* *x* = *b* for *x*, where *a* is a square matrix and
+*b* is a vector or a matrix of right-hand sides, by LU decomposition with partial
+pivoting. Throws a `RangeError` if *a* is singular, treating pivots no larger
+than *n* × `Number.EPSILON` × the largest magnitude in *a* as zero.
 
 ```javascript
-// Solves 2x + y = 5 and x + 3y = 10.
-var m = [[2, 1, 5], [1, 3, 10]];
-science.lin.gaussjordan(m); // true
-m; // [[1, 0, 1], [0, 1, 3]]
+// 2x + y = 5 and x + 3y = 10.
+solve([[2, 1], [1, 3]], [5, 10]); // [1, 3]
 ```
 
-<a name="lin_tridag" href="#lin_tridag">#</a> science.lin.<b>tridag</b>(<i>a</i>, <i>b</i>, <i>c</i>, <i>d</i>, <i>x</i>, <i>n</i>)
+<a name="inverse" href="#inverse">#</a> <b>inverse</b>(<i>a</i>)
 
-Solves the tridiagonal system of *n* equations *a*<sub>*i*</sub>*x*<sub>*i*−1</sub>
-+ *b*<sub>*i*</sub>*x*<sub>*i*</sub> + *c*<sub>*i*</sub>*x*<sub>*i*+1</sub> =
-*d*<sub>*i*</sub>, using the
+Returns the inverse of the square matrix *a*. Throws a `RangeError` if *a* is
+singular, as for [solve](#solve). To solve a linear system, use
+[solve](#solve) instead, which is faster and more accurate.
+
+```javascript
+inverse([[4, 7], [2, 6]]); // [[0.6, -0.7], [-0.2, 0.4]]
+```
+
+<a name="solveTridiagonal" href="#solveTridiagonal">#</a> <b>solveTridiagonal</b>(<i>lower</i>, <i>diagonal</i>, <i>upper</i>, <i>rhs</i>)
+
+Solves a tridiagonal system of *n* linear equations with the
 [Thomas algorithm](https://en.wikipedia.org/wiki/Tridiagonal_matrix_algorithm),
-and writes the solution into the array *x*. *a*[0] and *c*[*n* − 1] are not
-used. The arrays *b* and *d* are modified in place, so pass copies if you need
-them afterwards. No pivoting is done, so the system should be, for example,
-diagonally dominant.
+where equation *i* is *lower*[*i* − 1] *x*[*i* − 1] + *diagonal*[*i*] *x*[*i*] +
+*upper*[*i*] *x*[*i* + 1] = *rhs*[*i*]. *diagonal* and *rhs* have *n* elements,
+and *lower* and *upper* have *n* − 1. No pivoting is done, so the system should
+be, for example, diagonally dominant.
 
 ```javascript
-var x = [];
-science.lin.tridag([0, 1, 1], [2, 2, 2], [1, 1, 0], [3, 4, 3], x, 3);
-x; // [1, 1, 1]
+solveTridiagonal([1, 1], [2, 2, 2], [1, 1], [3, 4, 3]); // [1, 1, 1]
 ```
 
-<a name="lin_decompose" href="#lin_decompose">#</a> science.lin.<b>decompose</b>()
+<a name="eigen" href="#eigen">#</a> <b>eigen</b>(<i>a</i>)
 
-Constructs an eigendecomposition function, based on
-[JAMA](https://math.nist.gov/javanumerics/jama/).
+Returns the eigendecomposition of the square matrix *a*, based on
+[JAMA](https://math.nist.gov/javanumerics/jama/), as an object with these
+properties:
 
-<a name="_lin_decompose" href="#_lin_decompose">#</a> <i>decompose</i>(<i>A</i>)
+* *values*: the real parts of the eigenvalues.
+* *imaginary*: the imaginary parts of the eigenvalues.
+* *vectors*: a matrix whose columns are the eigenvectors.
 
-Returns the eigendecomposition of the square matrix *A* as an object `{D, V}`
-such that *A* × *V* = *V* × *D*. If *A* is symmetric, *D* is diagonal with the
-eigenvalues in ascending order, and the columns of *V* are the corresponding
-orthonormal eigenvectors. Otherwise, *D* is block diagonal: each real eigenvalue
-is on the diagonal, and each complex conjugate pair *a* ± *bi* forms a 2 × 2
-block [[*a*, *b*], [−*b*, *a*]].
+If *a* is symmetric, the eigenvalues are real and in ascending order, and the
+eigenvectors are orthonormal. Otherwise, for a complex conjugate pair of
+eigenvalues at positions *i* and *i* + 1, columns *i* and *i* + 1 of *vectors*
+hold the real and imaginary parts of the eigenvector for the eigenvalue at
+position *i*.
 
 ```javascript
-var result = science.lin.decompose()([[2, 0], [0, 1]]);
-result.D; // [[1, 0], [0, 2]]
-result.V; // [[0, 1], [1, 0]]
+const {values, vectors} = eigen([[2, 0], [0, 1]]);
+values; // [1, 2]
+vectors; // [[0, 1], [1, 0]]
 ```
 
-### Summary statistics
+### Other
 
-<a name="mean" href="#mean">#</a> science.stats.<b>mean</b>(<i>x</i>)
+<a name="quadratic" href="#quadratic">#</a> <b>quadratic</b>(<i>a</i>, <i>b</i>, <i>c</i>[, <i>options</i>])
 
-Returns the arithmetic mean of the array *x*, or NaN if it is empty. It is
-computed incrementally, which avoids overflow for large values.
+Returns the real roots of *a**x*² + *b**x* + *c* = 0 in ascending order: two
+roots, one (a repeated root), or none. If *a* is 0, the equation is solved as a
+linear equation. The roots are computed so as to avoid loss of precision. With
+the option *complex* set to true, the roots are returned as objects `{re, im}`
+and complex roots are included, in ascending order of their imaginary parts.
 
 ```javascript
-science.stats.mean([1, 2, 3, 4]); // 2.5
+quadratic(1, 1, -2); // [-2, 1]
+quadratic(1, 0, 1); // []
+quadratic(1, 0, 1, {complex: true}); // [{re: 0, im: -1}, {re: 0, im: 1}]
 ```
 
-<a name="median" href="#median">#</a> science.stats.<b>median</b>(<i>x</i>)
+<a name="EULER_GAMMA" href="#EULER_GAMMA">#</a> <b>EULER_GAMMA</b>
 
-Returns the median of the array *x*, or NaN if it is empty. Equivalent to
-`science.stats.quantiles(x, [0.5])[0]`.
+The [Euler–Mascheroni constant](https://en.wikipedia.org/wiki/Euler%E2%80%93Mascheroni_constant),
+γ ≈ 0.5772156649015329.
 
-```javascript
-science.stats.median([3, 1, 4, 2]); // 2.5
-```
+<a name="version" href="#version">#</a> <b>version</b>
 
-<a name="mode" href="#mode">#</a> science.stats.<b>mode</b>(<i>x</i>)
-
-Returns the most frequent value in the array *x*, or undefined if there is no
-single most frequent value. Values are compared by their string form, so `1`
-and `"1"` count as the same value.
-
-```javascript
-science.stats.mode([1, 2, 2, 3]); // 2
-science.stats.mode([1, 1, 2, 2]); // undefined
-```
-
-<a name="quantiles" href="#quantiles">#</a> science.stats.<b>quantiles</b>(<i>x</i>, <i>p</i>)
-
-Returns the quantiles of the array *x* for each probability in the array *p*,
-which should be between 0 and 1, using linear interpolation between the sorted
-values (type 7 in R's `quantile`, its default). *x* is not modified.
-
-```javascript
-science.stats.quantiles([1, 2, 3, 4], [0, 0.25, 0.5, 1]); // [1, 1.75, 2.5, 4]
-```
-
-<a name="iqr" href="#iqr">#</a> science.stats.<b>iqr</b>(<i>x</i>)
-
-Returns the interquartile range of the array *x*: the difference between its
-0.75 and 0.25 [quantiles](#quantiles).
-
-```javascript
-science.stats.iqr([1, 2, 3, 4]); // 1.5
-```
-
-<a name="variance" href="#variance">#</a> science.stats.<b>variance</b>(<i>x</i>)
-
-Returns the unbiased sample variance of the array *x* (with denominator
-*n* − 1). Returns 0 for a single value, and NaN for an empty array.
-
-```javascript
-science.stats.variance([1, 2, 3, 4]); // 1.6666666666666667
-```
-
-### Distributions
-
-<a name="erf" href="#erf">#</a> science.stats.<b>erf</b>(<i>x</i>)
-
-Returns an approximation of the
-[error function](https://en.wikipedia.org/wiki/Error_function) at *x*, using
-formula 7.1.26 of Abramowitz and Stegun, whose maximum absolute error is
-1.5 × 10<sup>−7</sup>.
-
-```javascript
-science.stats.erf(1); // ≈ 0.8427007
-```
-
-<a name="phi" href="#phi">#</a> science.stats.<b>phi</b>(<i>x</i>)
-
-Returns the cumulative distribution function of the standard normal
-distribution at *x*, computed from [erf](#erf).
-
-```javascript
-science.stats.phi(1.96); // ≈ 0.9750021
-```
-
-<a name="distribution_gaussian" href="#distribution_gaussian">#</a> science.stats.distribution.<b>gaussian</b>()
-
-Constructs a normal (Gaussian) distribution with mean 0 and variance 1.
-
-<a name="_distribution_gaussian" href="#_distribution_gaussian">#</a> <i>gaussian</i>()
-
-Returns a random number drawn from the distribution, using the
-[Marsaglia polar method](https://en.wikipedia.org/wiki/Marsaglia_polar_method).
-
-<a name="distribution_gaussian_pdf" href="#distribution_gaussian_pdf">#</a> <i>gaussian</i>.<b>pdf</b>(<i>x</i>)
-
-Returns the probability density function of the distribution at *x*.
-
-```javascript
-science.stats.distribution.gaussian().pdf(0); // ≈ 0.3989423
-```
-
-<a name="distribution_gaussian_cdf" href="#distribution_gaussian_cdf">#</a> <i>gaussian</i>.<b>cdf</b>(<i>x</i>)
-
-Returns the cumulative distribution function of the distribution at *x*,
-computed from [erf](#erf).
-
-<a name="distribution_gaussian_mean" href="#distribution_gaussian_mean">#</a> <i>gaussian</i>.<b>mean</b>([<i>mean</i>])
-
-Specifies the mean of the distribution, which defaults to 0. If *mean* is not
-specified, returns the current mean.
-
-<a name="distribution_gaussian_variance" href="#distribution_gaussian_variance">#</a> <i>gaussian</i>.<b>variance</b>([<i>variance</i>])
-
-Specifies the variance of the distribution, which defaults to 1. If *variance*
-is not specified, returns the current variance.
-
-```javascript
-var normal = science.stats.distribution.gaussian().mean(10).variance(4);
-normal.cdf(10); // ≈ 0.5
-```
-
-<a name="distribution_gaussian_random" href="#distribution_gaussian_random">#</a> <i>gaussian</i>.<b>random</b>([<i>random</i>])
-
-Specifies the source of uniform random numbers in [0, 1) used to generate
-samples, which defaults to `Math.random`. Use a seeded generator for
-reproducible samples. If *random* is not specified, returns the current source.
-
-### Distances
-
-Each distance function takes two arrays *a* and *b* of the same length. They can
-be passed to [kmeans](#kmeans_distance) and [hcluster](#hcluster_distance).
-
-<a name="distance_euclidean" href="#distance_euclidean">#</a> science.stats.distance.<b>euclidean</b>(<i>a</i>, <i>b</i>)
-
-Returns the [Euclidean distance](https://en.wikipedia.org/wiki/Euclidean_distance)
-between *a* and *b*.
-
-```javascript
-science.stats.distance.euclidean([0, 0], [3, 4]); // 5
-```
-
-<a name="distance_manhattan" href="#distance_manhattan">#</a> science.stats.distance.<b>manhattan</b>(<i>a</i>, <i>b</i>)
-
-Returns the [Manhattan distance](https://en.wikipedia.org/wiki/Taxicab_geometry),
-the sum of the absolute differences.
-
-```javascript
-science.stats.distance.manhattan([0, 0], [3, 4]); // 7
-```
-
-<a name="distance_chebyshev" href="#distance_chebyshev">#</a> science.stats.distance.<b>chebyshev</b>(<i>a</i>, <i>b</i>)
-
-Returns the [Chebyshev distance](https://en.wikipedia.org/wiki/Chebyshev_distance),
-the largest absolute difference.
-
-```javascript
-science.stats.distance.chebyshev([0, 0], [3, 4]); // 4
-```
-
-<a name="distance_minkowski" href="#distance_minkowski">#</a> science.stats.distance.<b>minkowski</b>(<i>p</i>)
-
-Returns a function that computes the
-[Minkowski distance](https://en.wikipedia.org/wiki/Minkowski_distance) of order
-*p* between two arrays. Order 1 is the Manhattan distance, and order 2 the
-Euclidean distance.
-
-```javascript
-science.stats.distance.minkowski(3)([0, 0], [3, 4]); // ≈ 4.4979414
-```
-
-<a name="distance_hamming" href="#distance_hamming">#</a> science.stats.distance.<b>hamming</b>(<i>a</i>, <i>b</i>)
-
-Returns the [Hamming distance](https://en.wikipedia.org/wiki/Hamming_distance),
-the number of positions at which *a* and *b* differ (using `!==`).
-
-```javascript
-science.stats.distance.hamming([1, 2, 3], [1, 0, 3]); // 1
-```
-
-<a name="distance_jaccard" href="#distance_jaccard">#</a> science.stats.distance.<b>jaccard</b>(<i>a</i>, <i>b</i>)
-
-Returns the proportion of positions at which *a* and *b* are equal (using
-`===`), or NaN if they are empty.
-
-```javascript
-science.stats.distance.jaccard([1, 2, 3, 4], [1, 2, 0, 0]); // 0.5
-```
-
-<a name="distance_braycurtis" href="#distance_braycurtis">#</a> science.stats.distance.<b>braycurtis</b>(<i>a</i>, <i>b</i>)
-
-Returns the [Bray–Curtis dissimilarity](https://en.wikipedia.org/wiki/Bray%E2%80%93Curtis_dissimilarity),
-Σ|*a*<sub>*i*</sub> − *b*<sub>*i*</sub>| / Σ|*a*<sub>*i*</sub> + *b*<sub>*i*</sub>|,
-for arrays of non-negative values. Returns NaN if both are all zeroes.
-
-```javascript
-science.stats.distance.braycurtis([0, 1], [1, 1]); // ≈ 0.3333333
-```
-
-### Kernel density estimation
-
-<a name="kde" href="#kde">#</a> science.stats.<b>kde</b>()
-
-Constructs a [kernel density estimator](https://en.wikipedia.org/wiki/Kernel_density_estimation)
-with an empty sample, a Gaussian kernel and the [nrd0](#bandwidth_nrd0)
-bandwidth.
-
-<a name="_kde" href="#_kde">#</a> <i>kde</i>(<i>points</i>)
-
-Returns the estimated density at each value in the array *points*, as an array
-of `[x, density]` pairs. Throws if the bandwidth is not positive.
-
-```javascript
-var kde = science.stats.kde().sample([1, 2, 3, 4, 5]).bandwidth(1);
-kde([3]); // ≈ [[3, 0.1981731]]
-```
-
-<a name="kde_sample" href="#kde_sample">#</a> <i>kde</i>.<b>sample</b>([<i>sample</i>])
-
-Specifies the array of values whose density is estimated. If *sample* is not
-specified, returns the current sample.
-
-<a name="kde_kernel" href="#kde_kernel">#</a> <i>kde</i>.<b>kernel</b>([<i>kernel</i>])
-
-Specifies the [kernel](#kernels) function, which defaults to
-`science.stats.kernel.gaussian`. If *kernel* is not specified, returns the
-current kernel.
-
-<a name="kde_bandwidth" href="#kde_bandwidth">#</a> <i>kde</i>.<b>bandwidth</b>([<i>bandwidth</i>])
-
-Specifies the bandwidth, either as a number or as a function that is passed the
-sample and returns a number, such as one of the [bandwidth selectors](#bandwidth).
-Defaults to [nrd0](#bandwidth_nrd0). If *bandwidth* is not specified, returns
-the current bandwidth function.
-
-<a name="kernels" href="#kernels">#</a> science.stats.<b>kernel</b>
-
-[Kernel functions](https://en.wikipedia.org/wiki/Kernel_(statistics)#Kernel_functions_in_common_use)
-for [kde](#kde_kernel). Each takes a value *u* and returns its weight; all but
-the Gaussian kernel are zero outside [−1, 1].
-
-* science.stats.kernel.<b>uniform</b>(<i>u</i>): ½.
-* science.stats.kernel.<b>triangular</b>(<i>u</i>): 1 − |*u*|.
-* science.stats.kernel.<b>epanechnikov</b>(<i>u</i>): ¾(1 − *u*²).
-* science.stats.kernel.<b>quartic</b>(<i>u</i>): (15/16)(1 − *u*²)².
-* science.stats.kernel.<b>triweight</b>(<i>u</i>): (35/32)(1 − *u*²)³.
-* science.stats.kernel.<b>gaussian</b>(<i>u</i>): *e*<sup>−*u*²/2</sup> / √(2π).
-* science.stats.kernel.<b>cosine</b>(<i>u</i>): (π/4) cos(π*u*/2).
-
-```javascript
-science.stats.kernel.epanechnikov(0); // 0.75
-```
-
-<a name="bandwidth" href="#bandwidth">#</a> science.stats.<b>bandwidth</b>
-
-Bandwidth selectors for Gaussian kernels, based on R's `bw.nrd0` and `bw.nrd`.
-Each takes an array *x* and returns a bandwidth.
-
-<a name="bandwidth_nrd0" href="#bandwidth_nrd0">#</a> science.stats.bandwidth.<b>nrd0</b>(<i>x</i>)
-
-Silverman's rule of thumb: 0.9 × min(*s*, IQR / 1.34) × *n*<sup>−1/5</sup>,
-where *s* is the sample standard deviation and IQR the
-[interquartile range](#iqr). If that minimum is 0, *s* is used instead, then
-|*x*[0]|, then 1, so the result is always positive for finite values.
-
-```javascript
-science.stats.bandwidth.nrd0([1, 4, 3, 2]); // ≈ 0.7635139
-```
-
-<a name="bandwidth_nrd" href="#bandwidth_nrd">#</a> science.stats.bandwidth.<b>nrd</b>(<i>x</i>)
-
-Scott's variation of the rule: 1.06 × min(*s*, IQR / 1.34) ×
-*n*<sup>−1/5</sup>. Unlike nrd0, this is 0 when the interquartile range is 0,
-such as when most values are repeated.
-
-```javascript
-science.stats.bandwidth.nrd([1, 4, 3, 2]); // ≈ 0.8992498
-```
-
-### Clustering
-
-<a name="kmeans" href="#kmeans">#</a> science.stats.<b>kmeans</b>()
-
-Constructs a [k-means](https://en.wikipedia.org/wiki/K-means_clustering)
-clusterer with *k* = 1 and the Euclidean distance.
-
-<a name="_kmeans" href="#_kmeans">#</a> <i>kmeans</i>(<i>vectors</i>)
-
-Clusters the array of *vectors* (arrays of numbers) into *k* clusters, and
-returns an object `{assignments, centroids}`: *assignments*[*i*] is the index of
-the cluster of *vectors*[*i*], and *centroids*[*j*] is the mean of the vectors
-in cluster *j*. The initial centroids are distinct vectors chosen at random
-with `Math.random`, so results can vary between runs. Iterates until the
-centroids stop changing, or for at most 1,000 iterations. Throws if there are
-fewer than *k* distinct vectors.
-
-```javascript
-var result = science.stats.kmeans().k(2)([[0], [1], [10], [11]]);
-result.assignments[0] === result.assignments[1]; // true
-result.assignments[0] === result.assignments[2]; // false
-```
-
-<a name="kmeans_k" href="#kmeans_k">#</a> <i>kmeans</i>.<b>k</b>([<i>k</i>])
-
-Specifies the number of clusters, which defaults to 1. If *k* is not specified,
-returns the current number.
-
-<a name="kmeans_distance" href="#kmeans_distance">#</a> <i>kmeans</i>.<b>distance</b>([<i>distance</i>])
-
-Specifies the [distance](#distances) function used to assign vectors to the
-nearest centroid, which defaults to the Euclidean distance. If *distance* is not
-specified, returns the current function.
-
-<a name="hcluster" href="#hcluster">#</a> science.stats.<b>hcluster</b>()
-
-Constructs an agglomerative
-[hierarchical clusterer](https://en.wikipedia.org/wiki/Hierarchical_clustering)
-with single linkage and the Euclidean distance.
-
-<a name="_hcluster" href="#_hcluster">#</a> <i>hcluster</i>(<i>vectors</i>)
-
-Repeatedly merges the two closest clusters of the array of *vectors* (arrays of
-numbers), and returns the root of the resulting binary tree, or undefined if
-there are fewer than two vectors. Each node is an object with these properties:
-
-* *left* and *right*: the two merged child nodes, or null for a leaf.
-* *dist*: the [linkage](#hcluster_linkage) distance between the children, or 0
-  for a leaf.
-* *centroid*: the mean of the node's vectors (for a leaf, the input vector
-  itself).
-* *size*: the number of vectors in the node.
-* *depth*: the height of the node above the leaves.
-
-```javascript
-var root = science.stats.hcluster()([[1], [2], [5]]);
-root.dist; // 3
-root.left.dist; // 1
-root.size; // 3
-```
-
-<a name="hcluster_linkage" href="#hcluster_linkage">#</a> <i>hcluster</i>.<b>linkage</b>([<i>linkage</i>])
-
-Specifies how the distance between two clusters is computed from the distances
-between their vectors: `"single"` (the smallest), `"complete"` (the largest) or
-`"average"` (the mean). Defaults to `"single"`. An unknown linkage is reported
-when the clusterer is invoked. If *linkage* is not specified, returns the current
-linkage.
-
-```javascript
-science.stats.hcluster().linkage("complete")([[1], [2], [5]]).dist; // 4
-```
-
-<a name="hcluster_distance" href="#hcluster_distance">#</a> <i>hcluster</i>.<b>distance</b>([<i>distance</i>])
-
-Specifies the [distance](#distances) function between vectors, which defaults to
-the Euclidean distance. If *distance* is not specified, returns the current
-function.
-
-### Smoothing
-
-<a name="loess" href="#loess">#</a> science.stats.<b>loess</b>()
-
-Constructs a [LOESS](https://en.wikipedia.org/wiki/Local_regression) curve generator instance.
-
-```javascript
-var myLoess = science.stats.loess();
-```
-
-<a name="loess_bandwidth" href="#loess_bandwidth">#</a> <i>loess</i>.<b>bandwidth</b>([<i>bandwidth</i>])
-
-Specifies the [bandwidth (smoothing parameter)](https://en.wikipedia.org/wiki/Local_regression#Localized_subsets_of_data) that controls how fine or coarse the smoothing is. The bandwidth is the fraction of the input points used for each local regression (taken from the nearest points with a positive weight); it must be greater than 0 and at most 1, and defaults to 0.3. Lower values fit the curve closer to the data, higher values make the curve more straight. If *bandwidth* is not specified, returns the current bandwidth.
-
-When the generator is invoked with three or more points, floor(*bandwidth* × *n*) must be at least 2, where *n* is the number of points, or an error is thrown. For example, the default bandwidth of 0.3 requires at least 7 points.
-
-```javascript
-myLoess.bandwidth(0.2);
-```
-
-<a name="loess_robustnessIterations" href="#loess_robustnessIterations">#</a> <i>loess</i>.<b>robustnessIterations</b>([<i>iterations</i>])
-
-Specifies the number of robustness iterations performed after the initial fit; it must be a non-negative integer, and defaults to 2. Each iteration reduces the weight of points with large residuals, making the curve less sensitive to outliers. Use 0 for a plain locally weighted linear regression. If *iterations* is not specified, returns the current number of robustness iterations.
-
-```javascript
-myLoess.robustnessIterations(4);
-```
-
-<a name="loess_accuracy" href="#loess_accuracy">#</a> <i>loess</i>.<b>accuracy</b>([<i>accuracy</i>])
-
-Specifies the tolerance below which values are treated as zero; it must be a non-negative number, and defaults to 1e-12. If the spread of x values in a local regression is below the tolerance, a flat line is fitted there instead of a sloped one; if the median residual falls below it, the remaining robustness iterations are skipped because the fit is already exact. If *accuracy* is not specified, returns the current accuracy.
-
-```javascript
-myLoess.accuracy(1e-9);
-```
-
-<a name="_loess" href="#_loess">#</a> <i>loess</i>(<i>xValues</i>, <i>yValues</i>[, <i>weights</i>])
-
-Invokes the LOESS algorithm to generate the smoothed curve. Accepts as input two arrays of values in data space. These two arrays must be of the same length, all values must be finite numbers, and *xValues* must be sorted in ascending order (tied values are allowed). Returns an array of smoothed Y values that has the same number of elements as the input arrays.
-
-The optional *weights* array gives a non-negative weight for each point, which scales its influence on the local regressions. Points with a weight of zero have no influence, but are still given a smoothed value from their neighbours. *weights* must have the same length as the other two arrays, and at least one weight must be positive. If *weights* is not specified (or is null or undefined), all points have a weight of 1.
-
-If the input or configuration is invalid, an error is thrown. An invalid bandwidth, number of robustness iterations or accuracy is reported when the generator is invoked, not when it is set.
-
-```javascript
-var yValuesSmooth = myLoess(xValues, yValues);
-```
+The version of Science.js, such as `"2.0.0"`.
 
 ## Development
 
-To help develop Science.js, you need to have [Node.js](http://www.nodejs.org)
-and [NPM](http://www.npmjs.org) installed. Once you have done that, run the
-following from the root directory of this repository:
+To help develop Science.js, you need to have [Node.js](https://nodejs.org/)
+installed. Then run the following from the root directory of this repository:
 
     npm install
-    npm run build
     npm test
 
-## Thanks
+`npm test` builds the browser bundles in `dist/` and runs the tests. The type
+definitions in `index.d.ts` are maintained by hand; the tests check that they
+declare every export.
 
-I originally started this in order to add a reusable statistics module to
-[D3.js](http://mbostock.github.com/d3/), but now it's grown into a whole new
-project of its own!
-
-The project structure was inspired by D3, so a big thank you goes to
-[Mike Bostock](http://bost.ocks.org/mike/) for this.
+The examples in `examples/` load [D3](https://d3js.org/) from a CDN and
+Science.js from `src/` as ES modules, so they must be served over HTTP. For
+example, run `python3 -m http.server` in the root directory and open
+<http://localhost:8000/examples/loess/loess.html>.
