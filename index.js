@@ -1,6 +1,1 @@
-import "./dist/science.js";
-
-const science = globalThis.science;
-
-export default science;
-export { science };
+export { default, science } from "./dist/science.esm.js";

@@ -49,7 +49,8 @@ jobs:
 
           const [pack] = JSON.parse(readFileSync(process.argv[2], 'utf8'));
           assert.deepEqual(pack.files.map(file => file.path).sort(), [
-            'LICENSE', 'README.md', 'dist/science.js', 'dist/science.min.js', 'index.js', 'package.json'
+            'LICENSE', 'README.md', 'dist/science.esm.js', 'dist/science.js', 'dist/science.min.js', 'index.js',
+            'package.json'
           ]);
           JS
           mkdir "$pack_dir/consumer"
@@ -58,10 +59,12 @@ jobs:
           node --input-type=module <<'JS'
           import assert from 'node:assert/strict';
           import { readFileSync } from 'node:fs';
+          import { createRequire } from 'node:module';
           import { runInNewContext } from 'node:vm';
           import science, { science as named } from 'science';
 
-          const { version } = JSON.parse(readFileSync('node_modules/science/package.json', 'utf8'));
+          const { version } = JSON.parse(readFileSync(createRequire(`${process.cwd()}/`).resolve('science/package.json'), 'utf8'));
+          assert.equal(globalThis.science, undefined, 'importing science must not define a global');
           assert.equal(named, science);
           assert.equal(science.version, version);
           assert.deepEqual(science.stats.loess().bandwidth(.6)([1, 2, 3, 4, 5], [2, 4, 6, 8, 10]), [2, 4, 6, 8, 10]);

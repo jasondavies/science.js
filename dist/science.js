@@ -1,4 +1,4 @@
-var science = globalThis.science || (globalThis.science = {});
+var science;
 (() => {
   // src/core/core.js
   science = { version: "2.0.0" };

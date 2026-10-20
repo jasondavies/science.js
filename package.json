@@ -19,7 +19,11 @@
     "url": "git+https://github.com/jasondavies/science.js.git"
   },
   "main": "./index.js",
-  "exports": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json",
+    "./dist/*": "./dist/*"
+  },
   "files": [
     "dist/",
     "index.js",
@@ -27,8 +31,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "mkdir -p dist && esbuild src/index.js --bundle --format=iife --platform=browser --banner:js='var science = globalThis.science || (globalThis.science = {});' --footer:js='globalThis.science = science;' --outfile=dist/science.js && esbuild src/index.js --bundle --format=iife --platform=browser --minify --banner:js='var science = globalThis.science || (globalThis.science = {});' --footer:js='globalThis.science = science;' --outfile=dist/science.min.js",
-    "clean": "rm -f dist/science.js dist/science.min.js",
+    "build": "node build.js",
+    "clean": "rm -f dist/science.esm.js dist/science.js dist/science.min.js",
     "test": "npm run build && node test/index.js"
   },
   "engines": {
