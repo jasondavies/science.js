@@ -41,9 +41,10 @@ Type definitions for TypeScript are included.
 * [Other](#other)
 
 Functions take arrays (or typed arrays) of numbers, and never modify their
-inputs. Optional settings are passed as an options object. Invalid input throws
-a `TypeError` (for a value of the wrong type) or a `RangeError` (for a value out
-of range, such as arrays of different lengths).
+inputs. Optional settings are passed as an options object, and an option that
+the function does not have throws, so that typos are caught. Invalid input
+throws a `TypeError` (for a value of the wrong type, or an unknown option) or a
+`RangeError` (for a value out of range, such as arrays of different lengths).
 
 ### Summary statistics
 
@@ -247,10 +248,11 @@ timestamps. The *options* are:
   reduce the weight of points with large residuals, making the curve less
   sensitive to outliers. Must be a non-negative integer, and defaults to 2; use 0
   for a plain locally weighted regression.
-* *accuracy*: the tolerance below which values are treated as zero, which
-  defaults to 1e-12. A local regression whose x values spread less than this
-  fits a flat line, and the robustness iterations stop once the median residual
-  falls below it.
+* *accuracy*: a relative tolerance, which defaults to 1e-12. As in R's
+  `lowess`, a local regression whose x values spread less than *accuracy* × the
+  range of x fits a flat line, and the robustness iterations stop once the
+  median residual falls below *accuracy* × the mean absolute y value, so the
+  results do not depend on the units of x and y.
 * *weights*: an array with a non-negative weight for each point, scaling its
   influence. Points with a weight of 0 have no influence, but are still given a
   smoothed value from their neighbours. At least one weight must be positive.
@@ -272,7 +274,8 @@ and iterating until the assignments stop changing. The *options* are:
 * *k*: the number of clusters, which is required. There must be at least *k*
   distinct vectors.
 * *distance*: the [distance](#distances) function used to assign vectors to
-  centroids, which defaults to `distances.euclidean`.
+  centroids, which defaults to `distances.euclidean`. Every distance must be
+  finite.
 * *maxIterations*: the maximum number of iterations, which defaults to 1,000.
 * *random*: a source of uniform random numbers in [0, 1) for the initial
   centroids, which defaults to `Math.random`; pass a seeded generator for
@@ -302,13 +305,14 @@ repeatedly merging the two closest clusters. The *options* are:
 * *distance*: the [distance](#distances) function between vectors, which
   defaults to `distances.euclidean`.
 
-Returns the root of the binary tree of clusters. Each node has these
-properties:
+Returns the root of the binary tree of clusters (a single leaf if there is only
+one vector). Every distance must be finite. Each node has these properties:
 
 * *left* and *right*: the two merged clusters, or null for a leaf.
 * *height*: the linkage distance between *left* and *right*, or 0 for a leaf.
 * *size*: the number of vectors in the cluster.
-* *depth*: the number of merges below the node.
+* *depth*: the height of the node in merges: 0 for a leaf, otherwise 1 more
+  than the larger depth of its children.
 * *index*: for a leaf, the index of its vector in *vectors*. Merged clusters are
   numbered from *n* (the number of vectors) in the order they are merged, as in
   SciPy.
@@ -467,13 +471,14 @@ properties:
 
 * *values*: the real parts of the eigenvalues.
 * *imaginary*: the imaginary parts of the eigenvalues.
-* *vectors*: a matrix whose columns are the eigenvectors.
+* *vectors*: a matrix whose columns are the eigenvectors, each of unit length.
 
 If *a* is symmetric, the eigenvalues are real and in ascending order, and the
 eigenvectors are orthonormal. Otherwise, for a complex conjugate pair of
 eigenvalues at positions *i* and *i* + 1, columns *i* and *i* + 1 of *vectors*
 hold the real and imaginary parts of the eigenvector for the eigenvalue at
-position *i*.
+position *i*, scaled together to unit length. In the rare case that the
+iteration does not converge, an `Error` is thrown.
 
 ```javascript
 const {values, vectors} = eigen([[2, 0], [0, 1]]);

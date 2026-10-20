@@ -1,10 +1,11 @@
-import { median } from "./summary.js";
-import { requireFiniteNumbers, requireSameLength } from "../validate.js";
+import { mean, median } from "./summary.js";
+import { checkOptions, requireFiniteNumbers, requireSameLength } from "../validate.js";
 
 // LOESS smoothing. Based on org.apache.commons.math.analysis.interpolation.
 // LoessInterpolator from http://commons.apache.org/math/, with the
 // neighbourhood search of R's lowess (Cleveland, 1979).
-export function loess(x, y, {bandwidth = .3, robustnessIterations = 2, accuracy = 1e-12, weights} = {}) {
+export function loess(x, y, options) {
+  let {bandwidth = .3, robustnessIterations = 2, accuracy = 1e-12, weights} = checkOptions(options, ["bandwidth", "robustnessIterations", "accuracy", "weights"], "loess");
   requireFiniteNumbers(x, "x");
   requireFiniteNumbers(y, "y");
   requireSameLength(x, y);
@@ -33,7 +34,9 @@ export function loess(x, y, {bandwidth = .3, robustnessIterations = 2, accuracy 
   }
   if (!points.length) throw new RangeError("At least one weight must be positive.");
 
-  if (n <= 2) return Array.from(y);
+  // With one or two points there is nothing to smooth, but a zero-weight point
+  // still takes its value from the other point.
+  if (n <= 2) return Array.from(y, (v, i) => weights[i] > 0 ? v : y[points[0]]);
 
   const bandwidthInPoints = Math.floor(bandwidth * n);
   if (bandwidthInPoints < 2) throw new RangeError("bandwidth is too small for the number of points.");
@@ -43,6 +46,10 @@ export function loess(x, y, {bandwidth = .3, robustnessIterations = 2, accuracy 
         res = new Array(n).fill(0),
         residuals = new Array(n).fill(0),
         robustnessWeights = new Array(n).fill(1),
+        // accuracy is relative to the range of x and the mean magnitude of y,
+        // as in R's lowess, so that the results do not depend on their units.
+        xTolerance = accuracy * Math.min(x[n - 1] - x[0], Number.MAX_VALUE),
+        yTolerance = accuracy * mean(Array.from(y, Math.abs)),
         // The combined weight of each point in the current window.
         w = new Float64Array(m);
 
@@ -79,7 +86,7 @@ export function loess(x, y, {bandwidth = .3, robustnessIterations = 2, accuracy 
       sumXY += w[k] * dx * (y[p] - meanY);
     }
 
-    const beta = Math.sqrt(sumXX / sumWeights) < accuracy || !sumXX ? 0 : sumXY / sumXX;
+    const beta = Math.sqrt(sumXX / sumWeights) < xTolerance || !sumXX ? 0 : sumXY / sumXX;
 
     // The fitted line evaluated at xi, which is 0 relative to xi.
     return meanY - beta * meanX;
@@ -129,7 +136,7 @@ export function loess(x, y, {bandwidth = .3, robustnessIterations = 2, accuracy 
     // Recompute the robustness weights from the median residual of the
     // weighted points.
     const medianResidual = median(points.map((p) => residuals[p]));
-    if (medianResidual < accuracy || !medianResidual) break;
+    if (medianResidual < yTolerance || !medianResidual) break;
 
     for (let i = 0; i < n; i++) {
       const arg = residuals[i] / (6 * medianResidual);

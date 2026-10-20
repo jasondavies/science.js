@@ -55,3 +55,13 @@ test("modes returns every most frequent value in order of appearance", () => {
 test("summary statistics reject values that are not arrays", () => {
   for (const f of [mean, median, variance, iqr, modes]) assert.throws(() => f(5), {name: "TypeError"});
 });
+
+test("mean and median of infinite or very large values", () => {
+  assert.equal(mean([Infinity, 1]), Infinity);
+  assert.equal(mean([-Infinity, -Infinity]), -Infinity);
+  assert.isTrue(Number.isNaN(mean([Infinity, -Infinity])));
+  assert.isTrue(Number.isNaN(mean([NaN, 1])));
+  assert.equal(median([-1.7e308, 1.7e308]), 0);
+  assert.equal(quantile([-1e308, 1e308], .5), 0);
+  assert.equal(median([1, Infinity]), Infinity);
+});

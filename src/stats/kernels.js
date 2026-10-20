@@ -1,3 +1,6 @@
+// Module-local, as reading an imported binding in a hot function is slower.
+const INVERSE_SQRT_2PI = 1 / Math.sqrt(2 * Math.PI);
+
 // Kernel functions, each of which integrates to 1.
 // See https://en.wikipedia.org/wiki/Kernel_(statistics).
 export const kernels = Object.freeze({
@@ -26,7 +29,7 @@ export const kernels = Object.freeze({
   },
 
   gaussian(u) {
-    return Math.exp(-.5 * u * u) / Math.sqrt(2 * Math.PI);
+    return Math.exp(-.5 * u * u) * INVERSE_SQRT_2PI;
   },
 
   cosine(u) {

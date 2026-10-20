@@ -1,11 +1,16 @@
-import { requireArray } from "../validate.js";
+import { requireArray, requireProbability } from "../validate.js";
 
-// The arithmetic mean, computed incrementally so that large values do not
-// overflow.
+// The arithmetic mean. If the sum of finite values overflows, the mean is
+// computed incrementally instead.
 export function mean(values) {
   requireArray(values, "values");
   const n = values.length;
   if (n === 0) return NaN;
+  let sum = 0;
+  for (let i = 0; i < n; i++) sum += values[i];
+  if (Number.isFinite(sum)) return sum / n;
+  // The values include an infinity or NaN, so the sum is the right answer.
+  for (let i = 0; i < n; i++) if (!Number.isFinite(values[i])) return sum / n;
   let m = 0;
   for (let i = 0; i < n; i++) m += (values[i] - m) / (i + 1);
   return m;
@@ -36,10 +41,6 @@ function sorted(values) {
   return Array.from(values).sort((a, b) => a - b);
 }
 
-function requireProbability(p) {
-  if (!(p >= 0 && p <= 1)) throw new RangeError("Probabilities must be between 0 and 1.");
-}
-
 // R's quantile type 7: linear interpolation between the sorted values.
 function quantileSorted(s, p) {
   const n = s.length;
@@ -47,7 +48,11 @@ function quantileSorted(s, p) {
   const index = p * (n - 1),
         lo = Math.floor(index),
         h = index - lo;
-  return h === 0 ? s[lo] : s[lo] + h * (s[lo + 1] - s[lo]);
+  if (h === 0) return s[lo];
+  const d = s[lo + 1] - s[lo];
+  // If the difference overflows (or the values are infinite), interpolate
+  // without it.
+  return Number.isFinite(d) ? s[lo] + h * d : (1 - h) * s[lo] + h * s[lo + 1];
 }
 
 export function quantile(values, p) {

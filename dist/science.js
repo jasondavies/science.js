@@ -60,26 +60,6 @@ var science = (() => {
   // src/constants.js
   var EULER_GAMMA = 0.5772156649015329;
 
-  // src/quadratic.js
-  function quadratic(a2, b2, c2, { complex = false } = {}) {
-    if (!Number.isFinite(a2) || !Number.isFinite(b2) || !Number.isFinite(c2)) {
-      throw new TypeError("Coefficients must be finite numbers.");
-    }
-    const real = (roots) => complex ? roots.map((re) => ({ re, im: 0 })) : roots;
-    if (a2 === 0) {
-      return real(b2 === 0 ? [] : [-c2 / b2]);
-    }
-    const d2 = b2 * b2 - 4 * a2 * c2, rb = -b2 / (2 * a2);
-    if (d2 > 0) {
-      const q = -(b2 + (b2 < 0 ? -1 : 1) * Math.sqrt(d2)) / 2, r1 = q / a2, r2 = c2 / q;
-      return real(r1 < r2 ? [r1, r2] : [r2, r1]);
-    }
-    if (d2 === 0) return real([rb]);
-    if (!complex) return [];
-    const im = Math.sqrt(-d2) / (2 * Math.abs(a2));
-    return [{ re: rb, im: -im }, { re: rb, im }];
-  }
-
   // src/validate.js
   function requireArray(values, name) {
     if (values == null || typeof values !== "object" || typeof values.length !== "number") {
@@ -113,6 +93,52 @@ var science = (() => {
     const [rows, columns] = requireMatrix(m, name);
     if (rows !== columns) throw new RangeError(`${name} must be square.`);
     return rows;
+  }
+  function checkOptions(options, keys, name) {
+    if (options === void 0) return {};
+    if (options === null || typeof options !== "object" || Array.isArray(options)) {
+      throw new TypeError(`The options for ${name} must be an object.`);
+    }
+    for (const key in options) {
+      if (!keys.includes(key)) throw new TypeError(`Unknown option for ${name}: ${key}`);
+    }
+    return options;
+  }
+  function requireProbability(p) {
+    if (!(p >= 0 && p <= 1)) throw new RangeError("Probabilities must be between 0 and 1.");
+  }
+  function finiteDistance(distance, a2, b2) {
+    const d2 = distance(a2, b2);
+    if (!Number.isFinite(d2)) throw new RangeError(`The distance between two vectors is ${d2}; distances must be finite.`);
+    return d2;
+  }
+
+  // src/quadratic.js
+  function quadratic(a2, b2, c2, options) {
+    const { complex = false } = checkOptions(options, ["complex"], "quadratic");
+    if (!Number.isFinite(a2) || !Number.isFinite(b2) || !Number.isFinite(c2)) {
+      throw new TypeError("Coefficients must be finite numbers.");
+    }
+    const real = (roots) => complex ? roots.map((re) => ({ re, im: 0 })) : roots;
+    const max = Math.max(Math.abs(a2), Math.abs(b2), Math.abs(c2));
+    if (max > 1e150 || max < 1e-150 && max > 0) {
+      const scale = Math.pow(2, -Math.round(Math.log2(max)));
+      a2 *= scale;
+      b2 *= scale;
+      c2 *= scale;
+    }
+    if (a2 === 0) {
+      return real(b2 === 0 ? [] : [-c2 / b2 + 0]);
+    }
+    const d2 = b2 * b2 - 4 * a2 * c2, rb = -b2 / (2 * a2) + 0;
+    if (d2 > 0) {
+      const q = -(b2 + (b2 < 0 ? -1 : 1) * Math.sqrt(d2)) / 2, r1 = q / a2 + 0, r2 = c2 / q + 0;
+      return real(r1 < r2 ? [r1, r2] : [r2, r1]);
+    }
+    if (d2 === 0) return real([rb]);
+    if (!complex) return [];
+    const im = Math.sqrt(-d2) / (2 * Math.abs(a2));
+    return [{ re: rb, im: -im }, { re: rb, im }];
   }
 
   // src/linalg/vector.js
@@ -209,7 +235,7 @@ var science = (() => {
     const n = requireSquareMatrix(a2, "a"), { m, sign } = lu(a2);
     let d2 = sign;
     for (let i = 0; i < n; i++) d2 *= m[i][i];
-    return d2;
+    return d2 + 0;
   }
   function solve(a2, b2) {
     const n = requireSquareMatrix(a2, "a");
@@ -284,17 +310,42 @@ var science = (() => {
         }
       }
     }
+    const max = largestMagnitude(a2), scale = max > 0 ? Math.pow(2, Math.round(Math.log2(max))) : 1, scaled = a2.map((row) => Array.from(row, (v) => v / scale));
     if (symmetric) {
-      for (let i = 0; i < n; i++) V[i] = Array.from(a2[i]);
+      for (let i = 0; i < n; i++) V[i] = scaled[i];
       tred2(d2, e, V);
       tql2(d2, e, V);
-      e.fill(0);
     } else {
-      const H = a2.map((row) => Array.from(row));
+      const H = scaled;
       orthes(H, V);
       hqr2(d2, e, H, V);
+      normalizeVectors(e, V);
     }
-    return { values: d2, imaginary: e, vectors: V };
+    return { values: d2.map((v) => v * scale), imaginary: e.map((v) => v * scale), vectors: V };
+  }
+  function largestMagnitude(a2) {
+    let max = 0;
+    for (let i = 0; i < a2.length; i++) {
+      const row = a2[i];
+      for (let j = 0; j < row.length; j++) max = Math.max(max, Math.abs(row[j]));
+    }
+    return max;
+  }
+  function normalizeVectors(e, V) {
+    const n = V.length;
+    for (let j = 0; j < n; j++) {
+      const columns = e[j] > 0 ? [j, j + 1] : [j];
+      let max = 0, s = 0;
+      for (const c2 of columns) for (let i = 0; i < n; i++) max = Math.max(max, Math.abs(V[i][c2]));
+      if (max === 0) continue;
+      for (const c2 of columns) for (let i = 0; i < n; i++) s += (V[i][c2] / max) ** 2;
+      const length = max * Math.sqrt(s);
+      for (const c2 of columns) for (let i = 0; i < n; i++) V[i][c2] /= length;
+      if (e[j] > 0) j++;
+    }
+  }
+  function maxIterations(n) {
+    return 30 * Math.max(10, n);
   }
   function tred2(d2, e, V) {
     var n = V.length;
@@ -388,7 +439,7 @@ var science = (() => {
       if (m > l) {
         var iter = 0;
         do {
-          iter++;
+          if (++iter > maxIterations(n)) throw new Error("The eigendecomposition did not converge.");
           var g = d2[l];
           var p = (d2[l + 1] - g) / (2 * e[l]);
           var r = Math.hypot(p, 1);
@@ -579,7 +630,7 @@ var science = (() => {
           y = H[n - 1][n - 1];
           w = H[n][n - 1] * H[n - 1][n];
         }
-        if (iter == 10) {
+        if (iter % 30 === 10) {
           exshift += x;
           for (var i = low; i <= n; i++) {
             H[i][i] -= x;
@@ -588,7 +639,7 @@ var science = (() => {
           x = y = 0.75 * s;
           w = -0.4375 * s * s;
         }
-        if (iter == 30) {
+        if (iter % 30 === 0 && iter > 0) {
           s = (y - x) / 2;
           s = s * s + w;
           if (s > 0) {
@@ -604,7 +655,7 @@ var science = (() => {
             x = y = w = 0.964;
           }
         }
-        iter++;
+        if (++iter > maxIterations(nn)) throw new Error("The eigendecomposition did not converge.");
         var m = n - 2;
         while (m >= l) {
           z = H[m][m];
@@ -813,6 +864,10 @@ var science = (() => {
     requireArray(values, "values");
     const n = values.length;
     if (n === 0) return NaN;
+    let sum = 0;
+    for (let i = 0; i < n; i++) sum += values[i];
+    if (Number.isFinite(sum)) return sum / n;
+    for (let i = 0; i < n; i++) if (!Number.isFinite(values[i])) return sum / n;
     let m = 0;
     for (let i = 0; i < n; i++) m += (values[i] - m) / (i + 1);
     return m;
@@ -836,14 +891,13 @@ var science = (() => {
     requireArray(values, "values");
     return Array.from(values).sort((a2, b2) => a2 - b2);
   }
-  function requireProbability(p) {
-    if (!(p >= 0 && p <= 1)) throw new RangeError("Probabilities must be between 0 and 1.");
-  }
   function quantileSorted(s, p) {
     const n = s.length;
     if (n === 0) return NaN;
     const index = p * (n - 1), lo = Math.floor(index), h = index - lo;
-    return h === 0 ? s[lo] : s[lo] + h * (s[lo + 1] - s[lo]);
+    if (h === 0) return s[lo];
+    const d2 = s[lo + 1] - s[lo];
+    return Number.isFinite(d2) ? s[lo] + h * d2 : (1 - h) * s[lo] + h * s[lo + 1];
   }
   function quantile(values, p) {
     requireProbability(p);
@@ -965,7 +1019,7 @@ var science = (() => {
     ]
   ];
   function erfcPositive(z) {
-    if (z === Infinity) return 0;
+    if (z > 30) return 0;
     const t = 2 / (2 + z), u = 2 * t - 1, piece = Math.min(3, Math.floor((u + 1) / 0.4)), s = (u + 0.8 - 0.4 * piece) / 0.2, c2 = G[piece];
     let b1 = 0, b2 = 0;
     for (let j = c2.length - 1; j > 0; j--) {
@@ -981,7 +1035,8 @@ var science = (() => {
 
   // src/stats/normal.js
   var SQRT_2PI = Math.sqrt(2 * Math.PI);
-  function normal({ mean: mean2 = 0, sd = 1 } = {}) {
+  function normal(options) {
+    const { mean: mean2 = 0, sd = 1 } = checkOptions(options, ["mean", "sd"], "normal");
     if (!Number.isFinite(mean2)) throw new TypeError("mean must be a finite number.");
     if (!(sd > 0 && sd < Infinity)) throw new RangeError("sd must be a positive finite number.");
     return Object.freeze({
@@ -995,7 +1050,7 @@ var science = (() => {
         return standardCdf((x - mean2) / sd);
       },
       quantile(p) {
-        if (!(p >= 0 && p <= 1)) throw new RangeError("Probabilities must be between 0 and 1.");
+        requireProbability(p);
         return mean2 + sd * standardQuantile(p);
       },
       sample(random = Math.random) {
@@ -1027,7 +1082,7 @@ var science = (() => {
       x = -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
     }
     const e = x < 0 ? standardCdf(x) - p : 1 - p - standardCdf(-x), u = e * SQRT_2PI * Math.exp(x * x / 2);
-    return x - u / (1 + x * u / 2);
+    return Number.isFinite(u) ? x - u / (1 + x * u / 2) : x;
   }
   function standardSample(random) {
     let x, y, s;
@@ -1110,6 +1165,7 @@ var science = (() => {
   });
 
   // src/stats/kernels.js
+  var INVERSE_SQRT_2PI = 1 / Math.sqrt(2 * Math.PI);
   var kernels = Object.freeze({
     uniform(u) {
       return Math.abs(u) <= 1 ? 0.5 : 0;
@@ -1131,7 +1187,7 @@ var science = (() => {
       return 35 / 32 * t * t * t;
     },
     gaussian(u) {
-      return Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI);
+      return Math.exp(-0.5 * u * u) * INVERSE_SQRT_2PI;
     },
     cosine(u) {
       return Math.abs(u) <= 1 ? Math.PI / 4 * Math.cos(Math.PI / 2 * u) : 0;
@@ -1162,7 +1218,8 @@ var science = (() => {
   });
 
   // src/stats/kde.js
-  function kde(sample, { kernel = kernels.gaussian, bandwidth = bandwidths.nrd0 } = {}) {
+  function kde(sample, options) {
+    const { kernel = kernels.gaussian, bandwidth = bandwidths.nrd0 } = checkOptions(options, ["kernel", "bandwidth"], "kde");
     requireFiniteNumbers(sample, "sample");
     if (!sample.length) throw new RangeError("sample must not be empty.");
     requireFunction(kernel, "kernel");
@@ -1178,21 +1235,22 @@ var science = (() => {
   }
 
   // src/stats/kmeans.js
-  function kmeans(vectors, { k, distance = distances.euclidean, maxIterations = 1e3, random = Math.random } = {}) {
+  function kmeans(vectors, options) {
+    const { k, distance = distances.euclidean, maxIterations: maxIterations2 = 1e3, random = Math.random } = checkOptions(options, ["k", "distance", "maxIterations", "random"], "kmeans");
     const [n, dimensions] = requireMatrix(vectors, "vectors");
     if (!(Number.isInteger(k) && k >= 1)) throw new RangeError("k must be a positive integer.");
-    if (!(Number.isInteger(maxIterations) && maxIterations >= 1)) throw new RangeError("maxIterations must be a positive integer.");
+    if (!(Number.isInteger(maxIterations2) && maxIterations2 >= 1)) throw new RangeError("maxIterations must be a positive integer.");
     requireFunction(distance, "distance");
     requireFunction(random, "random");
     if (distinctCount(vectors, k) < k) throw new RangeError("There are fewer distinct vectors than clusters.");
     let centroids = initialCentroids(vectors, k, distance, random), assignments = new Array(n).fill(-1), iterations = 0, changed = true;
-    while (changed && iterations < maxIterations) {
+    while (changed && iterations < maxIterations2) {
       iterations++;
       changed = false;
       for (let i = 0; i < n; i++) {
         let best = 0, min = Infinity;
         for (let j = 0; j < k; j++) {
-          const d2 = distance(vectors[i], centroids[j]);
+          const d2 = finiteDistance(distance, vectors[i], centroids[j]);
           if (d2 < min) {
             min = d2;
             best = j;
@@ -1224,7 +1282,7 @@ var science = (() => {
       const last = centroids[centroids.length - 1];
       let total = 0;
       for (let i = 0; i < n; i++) {
-        const d2 = distance(vectors[i], last);
+        const d2 = finiteDistance(distance, vectors[i], last);
         closest[i] = Math.min(closest[i], d2 * d2);
         total += closest[i];
       }
@@ -1243,22 +1301,22 @@ var science = (() => {
   }
 
   // src/stats/hcluster.js
-  function hcluster(vectors, { linkage = "single", distance = distances.euclidean } = {}) {
+  function hcluster(vectors, options) {
+    const { linkage = "single", distance = distances.euclidean } = checkOptions(options, ["linkage", "distance"], "hcluster");
     if (linkage !== "single" && linkage !== "complete" && linkage !== "average") {
       throw new RangeError(`Unknown linkage: ${linkage}`);
     }
     requireFunction(distance, "distance");
     const n = requireMatrix(vectors, "vectors")[0];
-    const clusters = [], sizes = [], distMatrix = [], dMin = [];
+    const clusters = [], distMatrix = [], dMin = [];
     for (let i = 0; i < n; i++) {
       clusters[i] = { left: null, right: null, height: 0, size: 1, depth: 0, index: i, centroid: Array.from(vectors[i]) };
-      sizes[i] = 1;
     }
     if (n === 1) return clusters[0];
     for (let i = 0; i < n; i++) {
       distMatrix[i] = new Array(n);
       distMatrix[i][i] = Infinity;
-      for (let j = 0; j < i; j++) distMatrix[i][j] = distMatrix[j][i] = distance(vectors[i], vectors[j]);
+      for (let j = 0; j < i; j++) distMatrix[i][j] = distMatrix[j][i] = finiteDistance(distance, vectors[i], vectors[j]);
     }
     for (let i = 0; i < n; i++) {
       dMin[i] = 0;
@@ -1287,10 +1345,9 @@ var science = (() => {
         } else if (linkage === "complete") {
           if (distMatrix[c1][j] < distMatrix[c2][j]) distMatrix[j][c1] = distMatrix[c1][j] = distMatrix[c2][j];
         } else {
-          distMatrix[j][c1] = distMatrix[c1][j] = (sizes[c1] * distMatrix[c1][j] + sizes[c2] * distMatrix[c2][j]) / (sizes[c1] + sizes[c2]);
+          distMatrix[j][c1] = distMatrix[c1][j] = (left.size * distMatrix[c1][j] + right.size * distMatrix[c2][j]) / root.size;
         }
       }
-      sizes[c1] += sizes[c2];
       for (let i = 0; i < n; i++) distMatrix[i][c2] = distMatrix[c2][i] = Infinity;
       for (let j = 0; j < n; j++) {
         if (linkage === "single") {
@@ -1312,7 +1369,8 @@ var science = (() => {
   }
 
   // src/stats/loess.js
-  function loess(x, y, { bandwidth = 0.3, robustnessIterations = 2, accuracy = 1e-12, weights } = {}) {
+  function loess(x, y, options) {
+    let { bandwidth = 0.3, robustnessIterations = 2, accuracy = 1e-12, weights } = checkOptions(options, ["bandwidth", "robustnessIterations", "accuracy", "weights"], "loess");
     requireFiniteNumbers(x, "x");
     requireFiniteNumbers(y, "y");
     requireSameLength(x, y);
@@ -1336,10 +1394,10 @@ var science = (() => {
       if (weights[i] > 0) points.push(i);
     }
     if (!points.length) throw new RangeError("At least one weight must be positive.");
-    if (n <= 2) return Array.from(y);
+    if (n <= 2) return Array.from(y, (v, i) => weights[i] > 0 ? v : y[points[0]]);
     const bandwidthInPoints = Math.floor(bandwidth * n);
     if (bandwidthInPoints < 2) throw new RangeError("bandwidth is too small for the number of points.");
-    const m = points.length, q = Math.min(bandwidthInPoints, m), res = new Array(n).fill(0), residuals = new Array(n).fill(0), robustnessWeights = new Array(n).fill(1), w = new Float64Array(m);
+    const m = points.length, q = Math.min(bandwidthInPoints, m), res = new Array(n).fill(0), residuals = new Array(n).fill(0), robustnessWeights = new Array(n).fill(1), xTolerance = accuracy * Math.min(x[n - 1] - x[0], Number.MAX_VALUE), yTolerance = accuracy * mean(Array.from(y, Math.abs)), w = new Float64Array(m);
     function localFit(lo, hi, xi, h, local, robust) {
       let sumWeights = 0, sumX = 0, sumY = 0;
       for (let k = lo; k <= hi; k++) {
@@ -1360,7 +1418,7 @@ var science = (() => {
         sumXX += w[k] * dx * dx;
         sumXY += w[k] * dx * (y[p] - meanY);
       }
-      const beta = Math.sqrt(sumXX / sumWeights) < accuracy || !sumXX ? 0 : sumXY / sumXX;
+      const beta = Math.sqrt(sumXX / sumWeights) < xTolerance || !sumXX ? 0 : sumXY / sumXX;
       return meanY - beta * meanX;
     }
     for (let iteration = 0; iteration <= robustnessIterations; iteration++) {
@@ -1388,7 +1446,7 @@ var science = (() => {
       }
       if (iteration === robustnessIterations) break;
       const medianResidual = median(points.map((p) => residuals[p]));
-      if (medianResidual < accuracy || !medianResidual) break;
+      if (medianResidual < yTolerance || !medianResidual) break;
       for (let i = 0; i < n; i++) {
         const arg = residuals[i] / (6 * medianResidual);
         robustnessWeights[i] = arg >= 1 ? 0 : (1 - arg * arg) ** 2;

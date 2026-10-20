@@ -20,6 +20,7 @@ export interface Complex {
 export function quadratic(a: number, b: number, c: number, options?: {complex?: false}): number[];
 /** Returns all roots of a x² + b x + c = 0, in ascending order of their imaginary parts. */
 export function quadratic(a: number, b: number, c: number, options: {complex: true}): Complex[];
+export function quadratic(a: number, b: number, c: number, options?: {complex?: boolean}): number[] | Complex[];
 
 // Linear algebra.
 
@@ -41,7 +42,7 @@ export interface Eigendecomposition {
   values: number[];
   /** The imaginary parts of the eigenvalues. */
   imaginary: number[];
-  /** A matrix whose columns are the eigenvectors. */
+  /** A matrix whose columns are the eigenvectors, each of unit length. */
   vectors: number[][];
 }
 export function eigen(a: Matrix): Eigendecomposition;

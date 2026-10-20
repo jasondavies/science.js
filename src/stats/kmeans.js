@@ -1,9 +1,10 @@
 import { distances } from "./distances.js";
-import { requireMatrix, requireFunction } from "../validate.js";
+import { checkOptions, finiteDistance, requireMatrix, requireFunction } from "../validate.js";
 
 // k-means clustering with k-means++ initialisation (Arthur and Vassilvitskii,
 // 2007), iterating until the assignments stop changing.
-export function kmeans(vectors, {k, distance = distances.euclidean, maxIterations = 1000, random = Math.random} = {}) {
+export function kmeans(vectors, options) {
+  const {k, distance = distances.euclidean, maxIterations = 1000, random = Math.random} = checkOptions(options, ["k", "distance", "maxIterations", "random"], "kmeans");
   const [n, dimensions] = requireMatrix(vectors, "vectors");
   if (!(Number.isInteger(k) && k >= 1)) throw new RangeError("k must be a positive integer.");
   if (!(Number.isInteger(maxIterations) && maxIterations >= 1)) throw new RangeError("maxIterations must be a positive integer.");
@@ -25,7 +26,7 @@ export function kmeans(vectors, {k, distance = distances.euclidean, maxIteration
       let best = 0,
           min = Infinity;
       for (let j = 0; j < k; j++) {
-        const d = distance(vectors[i], centroids[j]);
+        const d = finiteDistance(distance, vectors[i], centroids[j]);
         if (d < min) {
           min = d;
           best = j;
@@ -70,7 +71,7 @@ function initialCentroids(vectors, k, distance, random) {
     const last = centroids[centroids.length - 1];
     let total = 0;
     for (let i = 0; i < n; i++) {
-      const d = distance(vectors[i], last);
+      const d = finiteDistance(distance, vectors[i], last);
       closest[i] = Math.min(closest[i], d * d);
       total += closest[i];
     }

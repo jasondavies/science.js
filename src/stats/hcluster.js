@@ -1,9 +1,10 @@
 import { distances } from "./distances.js";
-import { requireMatrix, requireFunction } from "../validate.js";
+import { checkOptions, finiteDistance, requireMatrix, requireFunction } from "../validate.js";
 
 // Agglomerative hierarchical clustering. Returns the root of the binary tree
 // of merged clusters.
-export function hcluster(vectors, {linkage = "single", distance = distances.euclidean} = {}) {
+export function hcluster(vectors, options) {
+  const {linkage = "single", distance = distances.euclidean} = checkOptions(options, ["linkage", "distance"], "hcluster");
   if (linkage !== "single" && linkage !== "complete" && linkage !== "average") {
     throw new RangeError(`Unknown linkage: ${linkage}`);
   }
@@ -13,12 +14,10 @@ export function hcluster(vectors, {linkage = "single", distance = distances.eucl
   // Leaves are numbered 0 to n - 1 in input order, and merged clusters n, n + 1,
   // ... in the order they are created.
   const clusters = [],
-        sizes = [],
         distMatrix = [],
         dMin = [];
   for (let i = 0; i < n; i++) {
     clusters[i] = {left: null, right: null, height: 0, size: 1, depth: 0, index: i, centroid: Array.from(vectors[i])};
-    sizes[i] = 1;
   }
   if (n === 1) return clusters[0];
 
@@ -27,7 +26,7 @@ export function hcluster(vectors, {linkage = "single", distance = distances.eucl
   for (let i = 0; i < n; i++) {
     distMatrix[i] = new Array(n);
     distMatrix[i][i] = Infinity;
-    for (let j = 0; j < i; j++) distMatrix[i][j] = distMatrix[j][i] = distance(vectors[i], vectors[j]);
+    for (let j = 0; j < i; j++) distMatrix[i][j] = distMatrix[j][i] = finiteDistance(distance, vectors[i], vectors[j]);
   }
   for (let i = 0; i < n; i++) {
     dMin[i] = 0;
@@ -63,10 +62,9 @@ export function hcluster(vectors, {linkage = "single", distance = distances.eucl
       } else if (linkage === "complete") {
         if (distMatrix[c1][j] < distMatrix[c2][j]) distMatrix[j][c1] = distMatrix[c1][j] = distMatrix[c2][j];
       } else {
-        distMatrix[j][c1] = distMatrix[c1][j] = (sizes[c1] * distMatrix[c1][j] + sizes[c2] * distMatrix[c2][j]) / (sizes[c1] + sizes[c2]);
+        distMatrix[j][c1] = distMatrix[c1][j] = (left.size * distMatrix[c1][j] + right.size * distMatrix[c2][j]) / root.size;
       }
     }
-    sizes[c1] += sizes[c2];
 
     // Remove c2.
     for (let i = 0; i < n; i++) distMatrix[i][c2] = distMatrix[c2][i] = Infinity;

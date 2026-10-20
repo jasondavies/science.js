@@ -1,10 +1,11 @@
 import { bandwidths } from "./bandwidths.js";
 import { kernels } from "./kernels.js";
-import { requireFiniteNumbers, requireFunction } from "../validate.js";
+import { checkOptions, requireFiniteNumbers, requireFunction } from "../validate.js";
 
 // Kernel density estimation. Returns the estimated density function, with the
 // bandwidth used as its bandwidth property.
-export function kde(sample, {kernel = kernels.gaussian, bandwidth = bandwidths.nrd0} = {}) {
+export function kde(sample, options) {
+  const {kernel = kernels.gaussian, bandwidth = bandwidths.nrd0} = checkOptions(options, ["kernel", "bandwidth"], "kde");
   requireFiniteNumbers(sample, "sample");
   if (!sample.length) throw new RangeError("sample must not be empty.");
   requireFunction(kernel, "kernel");

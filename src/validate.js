@@ -40,3 +40,30 @@ export function requireSquareMatrix(m, name) {
   if (rows !== columns) throw new RangeError(`${name} must be square.`);
   return rows;
 }
+
+// Requires options to be undefined or an object with only the given keys, so
+// that misspelt options and positional arguments are not silently ignored.
+// Returns the options, or an empty object.
+export function checkOptions(options, keys, name) {
+  if (options === undefined) return {};
+  if (options === null || typeof options !== "object" || Array.isArray(options)) {
+    throw new TypeError(`The options for ${name} must be an object.`);
+  }
+  for (const key in options) {
+    if (!keys.includes(key)) throw new TypeError(`Unknown option for ${name}: ${key}`);
+  }
+  return options;
+}
+
+export function requireProbability(p) {
+  if (!(p >= 0 && p <= 1)) throw new RangeError("Probabilities must be between 0 and 1.");
+}
+
+// Calls the distance function, requiring a finite result: a NaN or infinite
+// distance would leave no well-defined closest cluster. SciPy's linkage rejects
+// them too.
+export function finiteDistance(distance, a, b) {
+  const d = distance(a, b);
+  if (!Number.isFinite(d)) throw new RangeError(`The distance between two vectors is ${d}; distances must be finite.`);
+  return d;
+}

@@ -5,5 +5,6 @@ import "./density-test.js";
 import "./distributions-test.js";
 import "./linalg-test.js";
 import "./loess-test.js";
+import "./options-test.js";
 import "./package-test.js";
 import "./summary-test.js";

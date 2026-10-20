@@ -148,3 +148,45 @@ test("quadratic with complex roots", () => {
   assert.deepEqual(quadratic(1, 1, -2, {complex: true}), [{re: -2, im: 0}, {re: 1, im: 0}]);
   assert.throws(() => quadratic(1, NaN, 1), {name: "TypeError"});
 });
+
+test("eigen does not hang when the QR iteration stalls", () => {
+  const {values, imaginary} = eigen([[-1, 1, 0], [-1, -1, 1], [0, -1, -1]]),
+        roots = values.map((v, i) => [v, imaginary[i]]).sort((p, q) => p[1] - q[1]);
+  assert.inDelta(roots, [[-1, -Math.SQRT2], [-1, 0], [-1, Math.SQRT2]], 1e-12);
+});
+
+test("eigen scales very large and small matrices", () => {
+  const big = eigen([[1e300, 1e300], [-1e300, 1e300]]);
+  assert.inDelta(big.values.map((v) => v / 1e300), [1, 1], 1e-15);
+  assert.inDelta(big.imaginary.map((v) => Math.abs(v) / 1e300), [1, 1], 1e-15);
+  assert.deepEqual(eigen([[1e-300, 0], [0, 2e-300]]).values, [1e-300, 2e-300]);
+});
+
+test("eigen normalises the eigenvectors of a defective matrix", () => {
+  // The triple eigenvalue may come out as a complex pair with tiny imaginary
+  // parts, whose two columns are normalised together.
+  const {imaginary, vectors} = eigen([[-1, -1, 1], [-1, -1, 0], [-1, 0, -1]]);
+  for (let j = 0; j < 3; j++) {
+    const column = vectors.map((row) => row[j]);
+    if (imaginary[j] > 0) {
+      const next = ++j;
+      column.push(...vectors.map((row) => row[next]));
+    }
+    assert.inDelta(norm(column), 1, 1e-15);
+  }
+});
+
+test("quadratic handles coefficients of large or small magnitude", () => {
+  const [big, small] = quadratic(1, 1e200, 1);
+  assert.inDelta(big / -1e200, 1, 1e-15);
+  assert.inDelta(small / -1e-200, 1, 1e-15);
+  assert.inDelta(quadratic(1e200, 3e200, 1e200), [(-3 - Math.sqrt(5)) / 2, (-3 + Math.sqrt(5)) / 2], 1e-15);
+  assert.inDelta(quadratic(1e-200, 3e-200, 1e-200), [(-3 - Math.sqrt(5)) / 2, (-3 + Math.sqrt(5)) / 2], 1e-15);
+  assert.deepEqual(quadratic(1e-200, 1e-200, 1e-200), []);
+});
+
+test("quadratic and determinant return 0 rather than -0", () => {
+  assert.deepEqual(quadratic(1, 1, 0), [-1, 0]);
+  assert.deepEqual(quadratic(0, 2, 0), [0]);
+  assert.equal(determinant([[1, 2], [2, 4]]), 0);
+});

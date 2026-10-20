@@ -16,7 +16,9 @@ below. Changes before 2.0.0 are recorded only in the git history.
 * **Plain functions with options objects** replace the configurable D3-style
   functions: for example, `science.stats.loess().bandwidth(.2)(x, y)` is now
   `loess(x, y, {bandwidth: .2})`. Options are validated when the function is
-  called.
+  called, and options that are not an object (such as the positional arguments
+  of 1.x) or that have unknown keys throw a `TypeError`, so that typos are not
+  silently ignored.
 * **Flat names.** `science.stats.*` and `science.lin.*` are now top-level
   exports, and several functions are renamed; see the table below.
 * **Errors are `TypeError` or `RangeError` instances**, rather than plain
@@ -30,6 +32,12 @@ below. Changes before 2.0.0 are recorded only in the git history.
 * **Renamed bundles.** `science.v1.js` and `science.v1.min.js` are now
   `dist/science.js` and `dist/science.min.js`, which define a global `science`
   with the same names as the ES module, such as `science.mean`.
+* **loess's `accuracy` is relative**, as in R's `lowess`: to the range of x and
+  the mean absolute y value, so that results do not depend on their units.
+* **Eigenvectors of non-symmetric matrices are normalised** to unit length, as
+  in LAPACK.
+* **Distance functions must return finite values** in `kmeans` and `hcluster`,
+  which throw a `RangeError` otherwise, as SciPy does.
 * **Results change** where 1.x was wrong; see Fixed below.
 
 ### Added
@@ -73,15 +81,22 @@ below. Changes before 2.0.0 are recorded only in the git history.
   bandwidth is now nrd0, as in R's `density`.
 * **erf** was accurate to only 1.5 × 10<sup>−7</sup>, so that, for example, the
   normal cdf at 0 was 0.5000000005. It is now accurate to about 1e-15.
+* **mean** returned NaN when a value was infinite, and **median** and
+  **quantile** could overflow for values of opposite sign and very large
+  magnitude.
 * **The Jaccard distance** returned the proportion of equal positions, which is
   a similarity, so it ranked vectors backwards when used as a distance.
 * **quadratic** returned wrong roots for almost every equation with *b* ≠ 0
   (for example, [−2.5, 0.5] for *x*² + *x* − 2), returned non-finite roots when
-  *a* was 0, and lost precision when |*b*| was much larger than |*a*| and |*c*|.
+  *a* was 0, lost precision when |*b*| was much larger than |*a*| and |*c*|, and
+  overflowed for very large or small coefficients.
 * **inverse** returned wrong results for well-conditioned matrices with small
   entries (the identity for 1e-11 × I), and a meaningless matrix for singular
   ones; it now throws for singular matrices.
-* **The eigendecomposition** left a stray `-1` property on its first row.
+* **The eigendecomposition** could loop forever when its iteration stalled (for
+  example, for `[[-1, 1, 0], [-1, -1, 1], [0, -1, -1]]`), overflowed for very
+  large entries, gave eigenvectors with entries as large as 10<sup>16</sup> for
+  defective matrices, and left a stray `-1` property on its first row.
 * **nrd0** used the second value instead of the first in its fallback. The
   bandwidth selectors now need at least two values, as in R.
 * **mode** failed for values such as `"hasOwnProperty"` and `"__proto__"`, and

@@ -72,3 +72,19 @@ test("normal validates its parameters", () => {
   assert.throws(() => normal().sample(5), {name: "TypeError"});
   assert.isTrue(Object.isFrozen(normal()));
 });
+
+test("erf, erfc and the normal cdf at extreme values", () => {
+  assert.equal(erf(1e308), 1);
+  assert.equal(erf(-1e308), -1);
+  assert.equal(erfc(1.2e307), 0);
+  assert.equal(erfc(-1.2e307), 2);
+  assert.equal(normal().cdf(1e308), 1);
+  assert.equal(normal().cdf(-1e308), 0);
+});
+
+test("normal quantile far into the tail", () => {
+  assertRelative(normal().quantile(1e-300), -37.0470962993612, 1e-15);
+  // Subnormal probabilities have only a few bits of precision.
+  assertRelative(normal().quantile(1e-315), -37.967300351067365, 1e-8);
+  assertRelative(normal().quantile(5e-324), -38.467405617144344, 1e-8);
+});

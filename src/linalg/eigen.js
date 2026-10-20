@@ -23,18 +23,59 @@ export function eigen(a) {
     }
   }
 
+  // Scale by a power of 2, which is exact, so that very large or small entries
+  // neither overflow nor underflow; the eigenvalues are scaled back at the end.
+  const max = largestMagnitude(a),
+        scale = max > 0 ? Math.pow(2, Math.round(Math.log2(max))) : 1,
+        scaled = a.map((row) => Array.from(row, (v) => v / scale));
+
   if (symmetric) {
-    for (let i = 0; i < n; i++) V[i] = Array.from(a[i]);
+    for (let i = 0; i < n; i++) V[i] = scaled[i];
     tred2(d, e, V); // Tridiagonalise.
     tql2(d, e, V); // Diagonalise.
-    e.fill(0);
   } else {
-    const H = a.map((row) => Array.from(row));
+    const H = scaled;
     orthes(H, V); // Reduce to Hessenberg form.
     hqr2(d, e, H, V); // Reduce Hessenberg to real Schur form.
+    normalizeVectors(e, V);
   }
 
-  return {values: d, imaginary: e, vectors: V};
+  return {values: d.map((v) => v * scale), imaginary: e.map((v) => v * scale), vectors: V};
+}
+
+// The largest magnitude in the matrix a. This is a separate function because,
+// inlined in eigen, the loop made the decomposition about 20% slower.
+function largestMagnitude(a) {
+  let max = 0;
+  for (let i = 0; i < a.length; i++) {
+    const row = a[i];
+    for (let j = 0; j < row.length; j++) max = Math.max(max, Math.abs(row[j]));
+  }
+  return max;
+}
+
+// Scales each eigenvector to unit length, as LAPACK does; the two columns
+// holding the real and imaginary parts of a complex eigenvector are scaled
+// together. Otherwise the eigenvectors of a defective matrix can have entries
+// as large as 1/epsilon.
+function normalizeVectors(e, V) {
+  const n = V.length;
+  for (let j = 0; j < n; j++) {
+    const columns = e[j] > 0 ? [j, j + 1] : [j];
+    let max = 0,
+        s = 0;
+    for (const c of columns) for (let i = 0; i < n; i++) max = Math.max(max, Math.abs(V[i][c]));
+    if (max === 0) continue;
+    for (const c of columns) for (let i = 0; i < n; i++) s += (V[i][c] / max) ** 2;
+    const length = max * Math.sqrt(s);
+    for (const c of columns) for (let i = 0; i < n; i++) V[i][c] /= length;
+    if (e[j] > 0) j++;
+  }
+}
+
+// The maximum number of QR or QL iterations for each eigenvalue, as in LAPACK.
+function maxIterations(n) {
+  return 30 * Math.max(10, n);
 }
 
 function tred2(d, e, V) {
@@ -157,7 +198,7 @@ function tql2(d, e, V) {
     if (m > l) {
       var iter = 0;
       do {
-        iter++;  // (Could check iteration count here.)
+        if (++iter > maxIterations(n)) throw new Error("The eigendecomposition did not converge.");
 
         // Compute implicit shift
         var g = d[l];
@@ -424,8 +465,10 @@ function hqr2(d, e, H, V) {
         w = H[n][n - 1] * H[n - 1][n];
       }
 
-      // Wilkinson's original ad hoc shift
-      if (iter == 10) {
+      // Wilkinson's original ad hoc shift. JAMA applies it, and MATLAB's below,
+      // only once, at iterations 10 and 30; repeating both every 30 iterations
+      // keeps that schedule but stops a stalled iteration from looping forever.
+      if (iter % 30 === 10) {
         exshift += x;
         for (var i = low; i <= n; i++) {
           H[i][i] -= x;
@@ -436,7 +479,7 @@ function hqr2(d, e, H, V) {
       }
 
       // MATLAB's new ad hoc shift
-      if (iter == 30) {
+      if (iter % 30 === 0 && iter > 0) {
         s = (y - x) / 2.0;
         s = s * s + w;
         if (s > 0) {
@@ -453,7 +496,7 @@ function hqr2(d, e, H, V) {
         }
       }
 
-      iter++;   // (Could check iteration count here.)
+      if (++iter > maxIterations(nn)) throw new Error("The eigendecomposition did not converge.");
 
       // Look for two consecutive small sub-diagonal elements
       var m = n-2;

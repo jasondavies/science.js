@@ -68,7 +68,8 @@ const G = [
 
 // erfc(z) = t exp(-z^2 + g(u)), for z >= 0.5.
 function erfcPositive(z) {
-  if (z === Infinity) return 0;
+  // erfc(z) underflows to 0 well before z = 30.
+  if (z > 30) return 0;
   const t = 2 / (2 + z),
         u = 2 * t - 1,
         piece = Math.min(3, Math.floor((u + 1) / .4)),

@@ -196,3 +196,19 @@ test("loess matches the Apache Commons Math reference values", () => {
         expected = [0.461, 0.499, 0.541, 0.308, 0.175, -0.042, -0.072, -0.196, -0.311, -0.446, -0.557, -1.497, -2.133, -3.08, -3.09, -0.621, 0.982, 3.449, 3.389, 3.336];
   assert.inDelta(loess(x, y, {robustnessIterations: 3}), expected, .02);
 });
+
+test("loess does not depend on the units of x or y", () => {
+  const i = Array.from({length: 10}, (_, k) => k),
+        y = i.map((v) => v % 3),
+        expected = loess(i, y, {bandwidth: .5});
+  for (const unit of [1e-13, 1e13]) {
+    assert.inDelta(loess(i.map((v) => v * unit), i, {bandwidth: .5}), i, 1e-12);
+    assert.inDelta(loess(i.map((v) => v * unit), y, {bandwidth: .5}), expected, 1e-12);
+  }
+  assert.inDelta(loess(i, y.map((v) => v * 1e-20), {bandwidth: .5}).map((v) => v / 1e-20), expected, 1e-12);
+});
+
+test("loess with two points respects zero weights", () => {
+  assert.deepEqual(loess([1, 2], [5, 100], {weights: [1, 0]}), [5, 5]);
+  assert.deepEqual(loess([1, 2], [5, 100], {weights: [0, 2]}), [100, 100]);
+});

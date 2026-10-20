@@ -1,10 +1,13 @@
 import { erfc } from "./erf.js";
-import { requireFunction } from "../validate.js";
+import { checkOptions, requireFunction, requireProbability } from "../validate.js";
 
+
+// Module-local, as reading an imported binding in a hot function is slower.
 const SQRT_2PI = Math.sqrt(2 * Math.PI);
 
 // A normal (Gaussian) distribution.
-export function normal({mean = 0, sd = 1} = {}) {
+export function normal(options) {
+  const {mean = 0, sd = 1} = checkOptions(options, ["mean", "sd"], "normal");
   if (!Number.isFinite(mean)) throw new TypeError("mean must be a finite number.");
   if (!(sd > 0 && sd < Infinity)) throw new RangeError("sd must be a positive finite number.");
 
@@ -19,7 +22,7 @@ export function normal({mean = 0, sd = 1} = {}) {
       return standardCdf((x - mean) / sd);
     },
     quantile(p) {
-      if (!(p >= 0 && p <= 1)) throw new RangeError("Probabilities must be between 0 and 1.");
+      requireProbability(p);
       return mean + sd * standardQuantile(p);
     },
     sample(random = Math.random) {
@@ -60,10 +63,12 @@ function standardQuantile(p) {
     x = -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
          ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
   }
-  // Refine using whichever tail keeps the error e precise.
+  // Refine using whichever tail keeps the error e precise. Far into the tails,
+  // where exp(x^2 / 2) overflows, the approximation is already as close as the
+  // cdf can resolve.
   const e = x < 0 ? standardCdf(x) - p : (1 - p) - standardCdf(-x),
         u = e * SQRT_2PI * Math.exp(x * x / 2);
-  return x - u / (1 + x * u / 2);
+  return Number.isFinite(u) ? x - u / (1 + x * u / 2) : x;
 }
 
 // The Marsaglia polar method.

@@ -70,7 +70,8 @@ export function determinant(a) {
         {m, sign} = lu(a);
   let d = sign;
   for (let i = 0; i < n; i++) d *= m[i][i];
-  return d;
+  // Adding 0 turns -0 into 0.
+  return d + 0;
 }
 
 // Solves a x = b for x, where b is a vector or a matrix of right-hand sides.

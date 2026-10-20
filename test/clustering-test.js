@@ -116,3 +116,18 @@ test("hcluster validates its input", () => {
   assert.throws(() => hcluster([]), {name: "RangeError"});
   assert.throws(() => hcluster([[1], [2]], {distance: null}), {name: "TypeError"});
 });
+
+test("hcluster and kmeans reject distances that are not finite", () => {
+  const error = {name: "RangeError"};
+  assert.throws(() => hcluster([[0, 0], [0, 0], [1, 1]], {distance: distances.braycurtis}), error);
+  assert.throws(() => hcluster([[0], [1], [100], [101]], {distance: (a, b) => Math.abs(a[0] - b[0]) > 50 ? Infinity : Math.abs(a[0] - b[0])}), error);
+  assert.throws(() => kmeans([[0, 0], [1, 1]], {k: 2, distance: () => NaN}), error);
+});
+
+test("hcluster depth is the height of the node in merges", () => {
+  const root = hcluster([[0], [1], [10], [11]]);
+  assert.equal(root.size, 4);
+  assert.equal(root.depth, 2);
+  assert.equal(root.left.depth, 1);
+  assert.equal(root.left.left.depth, 0);
+});
