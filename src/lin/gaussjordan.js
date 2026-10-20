@@ -3,13 +3,22 @@
 // Based on Jarno Elonen's Python version (public domain):
 // http://elonen.iki.fi/code/misc-notes/python-gaussj/index.html
 science.lin.gaussjordan = function(m, eps) {
-  if (!eps) eps = 1e-10;
-
   var h = m.length,
       w = m[0].length,
       y = -1,
       y2,
       x;
+
+  // By default, pivots are treated as zero relative to the largest entry
+  // of the square part of m, so that matrices with small entries still work.
+  if (!eps) {
+    var max = 0;
+    while (++y < h) {
+      x = -1; while (++x < h) max = Math.max(max, Math.abs(m[y][x]));
+    }
+    eps = h * Number.EPSILON * max;
+    y = -1;
+  }
 
   while (++y < h) {
     var maxrow = y;
