@@ -25,42 +25,37 @@ var science = globalThis.science || (globalThis.science = {});
 
   // src/core/hypot.js
   science.hypot = function(x, y) {
-    x = Math.abs(x);
-    y = Math.abs(y);
-    var max, min;
-    if (x > y) {
-      max = x;
-      min = y;
-    } else {
-      max = y;
-      min = x;
-    }
-    if (max === 0) return 0;
-    var r = min / max;
-    return max * Math.sqrt(1 + r * r);
+    return Math.hypot(x, y);
   };
 
   // src/core/quadratic.js
   science.quadratic = function() {
     var complex = false;
     function quadratic(a, b, c) {
-      var d = b * b - 4 * a * c;
-      var rb = -b / (2 * a);
-      if (d > 0) {
-        d = Math.sqrt(d) / (2 * a);
-        return complex ? [{ r: rb - d, i: 0 }, { r: rb + d, i: 0 }] : [rb - d, rb + d];
-      } else if (d === 0) {
-        return complex ? [{ r: rb, i: 0 }] : [rb];
+      var roots;
+      if (a === 0) {
+        roots = b === 0 ? [] : [-c / b];
       } else {
-        if (complex) {
-          d = Math.sqrt(-d) / (2 * a);
-          return [
-            { r: rb, i: -d },
-            { r: rb, i: d }
-          ];
+        var d = b * b - 4 * a * c, rb = -b / (2 * a);
+        if (d > 0) {
+          var q = -(b + (b < 0 ? -1 : 1) * Math.sqrt(d)) / 2, r1 = q / a, r2 = c / q;
+          roots = r1 < r2 ? [r1, r2] : [r2, r1];
+        } else if (d === 0) {
+          roots = [rb];
+        } else {
+          if (complex) {
+            d = Math.sqrt(-d) / (2 * Math.abs(a));
+            return [
+              { r: rb, i: -d },
+              { r: rb, i: d }
+            ];
+          }
+          return [];
         }
-        return [];
       }
+      return complex ? roots.map(function(r) {
+        return { r, i: 0 };
+      }) : roots;
     }
     quadratic.complex = function(x) {
       if (!arguments.length) return complex;
@@ -675,8 +670,16 @@ var science = globalThis.science || (globalThis.science = {});
 
   // src/lin/gaussjordan.js
   science.lin.gaussjordan = function(m, eps) {
-    if (!eps) eps = 1e-10;
     var h = m.length, w = m[0].length, y = -1, y2, x;
+    if (!eps) {
+      var max = 0;
+      while (++y < h) {
+        x = -1;
+        while (++x < h) max = Math.max(max, Math.abs(m[y][x]));
+      }
+      eps = h * Number.EPSILON * max;
+      y = -1;
+    }
     while (++y < h) {
       var maxrow = y;
       y2 = y;
@@ -784,7 +787,7 @@ var science = globalThis.science || (globalThis.science = {});
     nrd0: function(x) {
       var hi = Math.sqrt(science.stats.variance(x)), lo = Math.min(hi, science.stats.iqr(x) / 1.34);
       if (!lo)
-        (lo = hi) || (lo = Math.abs(x[1])) || (lo = 1);
+        (lo = hi) || (lo = Math.abs(x[0])) || (lo = 1);
       return 0.9 * lo * Math.pow(x.length, -0.2);
     },
     // Scott, D. W. (1992) Multivariate Density Estimation: Theory, Practice, and

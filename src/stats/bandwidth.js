@@ -7,7 +7,7 @@ science.stats.bandwidth = {
     var hi = Math.sqrt(science.stats.variance(x)),
         lo = Math.min(hi, science.stats.iqr(x) / 1.34);
     if (!lo)
-      (lo = hi) || (lo = Math.abs(x[1])) || (lo = 1);
+      (lo = hi) || (lo = Math.abs(x[0])) || (lo = 1);
     return .9 * lo * Math.pow(x.length, -.2);
   },
 
