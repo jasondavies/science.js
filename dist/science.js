@@ -1,7 +1,7 @@
 var science = globalThis.science || (globalThis.science = {});
 (() => {
   // src/core/core.js
-  science = { version: "1.9.3" };
+  science = { version: "2.0.0" };
 
   // src/core/ascending.js
   science.ascending = function(a, b) {
