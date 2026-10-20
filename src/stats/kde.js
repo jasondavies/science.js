@@ -2,10 +2,11 @@
 science.stats.kde = function() {
   var kernel = science.stats.kernel.gaussian,
       sample = [],
-      bandwidth = science.stats.bandwidth.nrd;
+      bandwidth = science.stats.bandwidth.nrd0;
 
   function kde(points, i) {
     var bw = bandwidth.call(this, sample);
+    if (!(bw > 0)) throw {error: "Bandwidth must be positive."};
     return points.map(function(x) {
       var i = -1,
           y = 0,

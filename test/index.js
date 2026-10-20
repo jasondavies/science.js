@@ -15,6 +15,7 @@ import "./stats/distribution/gaussian-test.js";
 import "./stats/erf-test.js";
 import "./stats/hcluster-test.js";
 import "./stats/iqr-test.js";
+import "./stats/kde-test.js";
 import "./stats/kmeans-test.js";
 import "./stats/loess-test.js";
 import "./stats/mean-test.js";
