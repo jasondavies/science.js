@@ -78,7 +78,7 @@ science.stats.loess = function() {
             sumXSquared = 0,
             sumY = 0,
             sumXY = 0,
-            denom = Math.abs(1 / (xval[edge] - x));
+            denom = xval[edge] === x ? 0 : Math.abs(1 / (xval[edge] - x));
 
         for (var k = ileft; k <= iright; ++k) {
           var xk   = xval[k],
@@ -91,6 +91,14 @@ science.stats.loess = function() {
           sumXSquared += xk * xkw;
           sumY += yk * w;
           sumXY += yk * xkw;
+        }
+
+        // If every point in the window has zero weight, there is nothing to
+        // fit, so fall back to the original value (as R's lowess does).
+        if (!(sumWeights > 0)) {
+          res[i] = yval[i];
+          residuals[i] = 0;
+          continue;
         }
 
         var meanX = sumX / sumWeights,

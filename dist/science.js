@@ -1179,7 +1179,7 @@ var science = globalThis.science || (globalThis.science = {});
           }
           var ileft = bandwidthInterval[0], iright = bandwidthInterval[1];
           var edge = xval[i] - xval[ileft] > xval[iright] - xval[i] ? ileft : iright;
-          var sumWeights = 0, sumX = 0, sumXSquared = 0, sumY = 0, sumXY = 0, denom = Math.abs(1 / (xval[edge] - x));
+          var sumWeights = 0, sumX = 0, sumXSquared = 0, sumY = 0, sumXY = 0, denom = xval[edge] === x ? 0 : Math.abs(1 / (xval[edge] - x));
           for (var k = ileft; k <= iright; ++k) {
             var xk = xval[k], yk = yval[k], dist = k < i ? x - xk : xk - x, w = science_stats_loessTricube(dist * denom) * robustnessWeights[k] * weights[k], xkw = xk * w;
             sumWeights += w;
@@ -1187,6 +1187,11 @@ var science = globalThis.science || (globalThis.science = {});
             sumXSquared += xk * xkw;
             sumY += yk * w;
             sumXY += yk * xkw;
+          }
+          if (!(sumWeights > 0)) {
+            res[i] = yval[i];
+            residuals[i] = 0;
+            continue;
           }
           var meanX = sumX / sumWeights, meanY = sumY / sumWeights, meanXY = sumXY / sumWeights, meanXSquared = sumXSquared / sumWeights;
           var beta = Math.sqrt(Math.abs(meanXSquared - meanX * meanX)) < accuracy ? 0 : (meanXY - meanX * meanY) / (meanXSquared - meanX * meanX);

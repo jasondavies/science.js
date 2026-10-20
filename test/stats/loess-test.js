@@ -74,6 +74,43 @@ test("science.stats.loess straight line", function() {
   assert.deepEqual(y, res);
 });
 
+test("science.stats.loess falls back to y when robustness weights empty a window", function() {
+  var loess = science.stats.loess().bandwidth(4 / 7),
+      res = loess([0, 1, 2, 3, 4, 5, 6], [0, 2, 5, 0, 4, 2, 0]);
+  assert.inDelta(res, [0, 2, 2, 0, 2, 2, 0], 1e-9);
+});
+
+test("science.stats.loess falls back to y when weights empty a window", function() {
+  var loess = science.stats.loess().bandwidth(.4).robustnessIterations(0),
+      res = loess([0, 1, 2, 3, 4], [0, 2, 4, 6, 8], [0, 0, 1, 1, 1]);
+  assert.inDelta(res, [0, 2, 4, 6, 8], 1e-9);
+});
+
+test("science.stats.loess never returns NaN for valid input", function() {
+  var seed = 42,
+      random = function() { return (seed = seed * 16807 % 2147483647) / 2147483647; },
+      t = -1;
+  while (++t < 2000) {
+    var n = 3 + Math.floor(random() * 30),
+        xval = [],
+        yval = [],
+        weights = [],
+        x = random(),
+        i = -1;
+    while (++i < n) {
+      xval[i] = x;
+      yval[i] = random() < .1 ? random() * 100 : random();
+      weights[i] = random() < .3 ? 0 : random();
+      x += 1e-9 + random() * (random() < .2 ? 1e-6 : 1);
+    }
+    var loess = science.stats.loess()
+          .bandwidth(Math.min(1, (2 + Math.floor(random() * n)) / n))
+          .robustnessIterations(Math.floor(random() * 4)),
+        res = random() < .5 ? loess(xval, yval) : loess(xval, yval, weights);
+    assert.isTrue(res.every(isFinite), "non-finite result for input " + t);
+  }
+});
+
 test("science.stats.loess distorted sine", function() {
   var numPoints = 100;
   var xval = [];
