@@ -1226,13 +1226,11 @@ var science = globalThis.science || (globalThis.science = {});
   };
   function science_stats_loessFiniteReal(values) {
     var n = values.length, i = -1;
-    while (++i < n) if (!isFinite(values[i])) return false;
-    return true;
+    while (++i < n) if (!isFinite(values[i])) throw { error: "Values must be finite." };
   }
   function science_stats_loessStrictlyIncreasing(xval) {
     var n = xval.length, i = 0;
-    while (++i < n) if (xval[i - 1] >= xval[i]) return false;
-    return true;
+    while (++i < n) if (xval[i - 1] >= xval[i]) throw { error: "X values must be strictly increasing." };
   }
   function science_stats_loessTricube(x) {
     return (x = 1 - x * x * x) * x * x;

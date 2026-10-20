@@ -24,6 +24,21 @@ test("science.stats.loess two points", function() {
   assert.deepEqual([.7, .8], res);
 });
 
+test("science.stats.loess rejects non-finite values", function() {
+  var loess = science.stats.loess().bandwidth(.6),
+      error = {error: "Values must be finite."};
+  assert.throws(function() { loess([1, 2, NaN, 4, 5], [1, 2, 3, 4, 5]); }, error);
+  assert.throws(function() { loess([1, 2, 3, 4, 5], [1, Infinity, 3, 4, 5]); }, error);
+  assert.throws(function() { loess([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 1, NaN, 1, 1]); }, error);
+});
+
+test("science.stats.loess rejects x values that are not strictly increasing", function() {
+  var loess = science.stats.loess().bandwidth(.6),
+      error = {error: "X values must be strictly increasing."};
+  assert.throws(function() { loess([5, 1, 4, 2, 3], [5, 1, 4, 2, 3]); }, error);
+  assert.throws(function() { loess([1, 1, 2, 3, 4], [1, 2, 3, 4, 5]); }, error);
+});
+
 test("science.stats.loess straight line", function() {
   var loess = science.stats.loess().bandwidth(.6),
       y = [2, 4, 6, 8, 10],
