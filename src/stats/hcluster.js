@@ -22,14 +22,16 @@ export function hcluster(vectors, {linkage = "single", distance = distances.eucl
   }
   if (n === 1) return clusters[0];
 
-  // The distance matrix, and the closest cluster to each cluster.
+  // The distance matrix (computing each distance once, as distances are
+  // symmetric), and the closest cluster to each cluster.
+  for (let i = 0; i < n; i++) {
+    distMatrix[i] = new Array(n);
+    distMatrix[i][i] = Infinity;
+    for (let j = 0; j < i; j++) distMatrix[i][j] = distMatrix[j][i] = distance(vectors[i], vectors[j]);
+  }
   for (let i = 0; i < n; i++) {
     dMin[i] = 0;
-    distMatrix[i] = [];
-    for (let j = 0; j < n; j++) {
-      distMatrix[i][j] = i === j ? Infinity : distance(vectors[i], vectors[j]);
-      if (distMatrix[i][dMin[i]] > distMatrix[i][j]) dMin[i] = j;
-    }
+    for (let j = 0; j < n; j++) if (distMatrix[i][dMin[i]] > distMatrix[i][j]) dMin[i] = j;
   }
 
   let root;
@@ -50,7 +52,7 @@ export function hcluster(vectors, {linkage = "single", distance = distances.eucl
       size: left.size + right.size,
       depth: 1 + Math.max(left.depth, right.depth),
       index: n + p,
-      centroid: left.centroid.map((v, i) => (left.size * v + right.size * right.centroid[i]) / (left.size + right.size))
+      centroid: mergeCentroids(left, right)
     };
 
     // Update the distances to the merged cluster, which replaces c1.
@@ -84,4 +86,13 @@ export function hcluster(vectors, {linkage = "single", distance = distances.eucl
   }
 
   return root;
+}
+
+// The mean of the vectors in clusters a and b, weighted by their sizes.
+function mergeCentroids(a, b) {
+  const n = a.centroid.length,
+        size = a.size + b.size,
+        centroid = new Array(n);
+  for (let i = 0; i < n; i++) centroid[i] = (a.size * a.centroid[i] + b.size * b.centroid[i]) / size;
+  return centroid;
 }

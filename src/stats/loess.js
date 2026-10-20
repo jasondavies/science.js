@@ -42,24 +42,26 @@ export function loess(x, y, {bandwidth = .3, robustnessIterations = 2, accuracy 
         q = Math.min(bandwidthInPoints, m),
         res = new Array(n).fill(0),
         residuals = new Array(n).fill(0),
-        robustnessWeights = new Array(n).fill(1);
+        robustnessWeights = new Array(n).fill(1),
+        // The combined weight of each point in the current window.
+        w = new Float64Array(m);
 
   // Computes a least-squares linear fit at xi over points[lo..hi], weighted by
   // the product of the given weights, the robustness weights (if robust) and
   // the tricube weight function (if local). Returns null if the total weight
   // is zero. x values are taken relative to xi, so that large offsets in x do
-  // not lose precision.
+  // not lose precision, and the spread is computed about the weighted mean, in
+  // a second pass, so that it is accurate wherever the window lies.
   function localFit(lo, hi, xi, h, local, robust) {
     let sumWeights = 0,
         sumX = 0,
         sumY = 0;
-    const w = [];
     for (let k = lo; k <= hi; k++) {
       const p = points[k];
       let wk = weights[p];
       if (robust) wk *= robustnessWeights[p];
       if (local && h > 0) wk *= tricube(Math.abs(x[p] - xi) / h);
-      w.push(wk);
+      w[k] = wk;
       sumWeights += wk;
       sumX += wk * (x[p] - xi);
       sumY += wk * y[p];
@@ -73,8 +75,8 @@ export function loess(x, y, {bandwidth = .3, robustnessIterations = 2, accuracy 
     for (let k = lo; k <= hi; k++) {
       const p = points[k],
             dx = x[p] - xi - meanX;
-      sumXX += w[k - lo] * dx * dx;
-      sumXY += w[k - lo] * dx * (y[p] - meanY);
+      sumXX += w[k] * dx * dx;
+      sumXY += w[k] * dx * (y[p] - meanY);
     }
 
     const beta = Math.sqrt(sumXX / sumWeights) < accuracy || !sumXX ? 0 : sumXY / sumXX;

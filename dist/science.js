@@ -163,19 +163,27 @@ var science = (() => {
     if (b2.length && typeof b2[0] === "number") {
       requireFiniteNumbers(b2, "b");
       if (b2.length !== inner) throw new RangeError(`Cannot multiply a ${rows}\xD7${inner} matrix by a vector of length ${b2.length}.`);
-      return Array.from({ length: rows }, (_, i) => {
+      const ab2 = new Array(rows);
+      for (let i = 0; i < rows; i++) {
+        const ai = a2[i];
         let s = 0;
-        for (let k = 0; k < inner; k++) s += a2[i][k] * b2[k];
-        return s;
-      });
+        for (let k = 0; k < inner; k++) s += ai[k] * b2[k];
+        ab2[i] = s;
+      }
+      return ab2;
     }
     const [bRows, columns] = requireMatrix(b2, "b");
     if (bRows !== inner) throw new RangeError(`Cannot multiply a ${rows}\xD7${inner} matrix by a ${bRows}\xD7${columns} matrix.`);
-    return Array.from({ length: rows }, (_, i) => Array.from({ length: columns }, (_2, j) => {
-      let s = 0;
-      for (let k = 0; k < inner; k++) s += a2[i][k] * b2[k][j];
-      return s;
-    }));
+    const ab = new Array(rows);
+    for (let i = 0; i < rows; i++) {
+      const ai = a2[i], row = new Array(columns).fill(0);
+      for (let k = 0; k < inner; k++) {
+        const f = ai[k], bk = b2[k];
+        for (let j = 0; j < columns; j++) row[j] += f * bk[j];
+      }
+      ab[i] = row;
+    }
+    return ab;
   }
   function lu(a2) {
     const n = a2.length, m = a2.map((row) => Array.from(row)), permutation = Array.from({ length: n }, (_, i) => i);
@@ -213,13 +221,21 @@ var science = (() => {
     for (let i = 0; i < n; i++) {
       if (!(Math.abs(m[i][i]) > tolerance)) throw new RangeError("Matrix is singular.");
     }
-    const x = Array.from({ length: n }, (_, i) => vector ? [b2[permutation[i]]] : Array.from(b2[permutation[i]]));
-    for (let c2 = 0; c2 < columns; c2++) {
-      for (let i = 0; i < n; i++) for (let k = 0; k < i; k++) x[i][c2] -= m[i][k] * x[k][c2];
-      for (let i = n - 1; i >= 0; i--) {
-        for (let k = i + 1; k < n; k++) x[i][c2] -= m[i][k] * x[k][c2];
-        x[i][c2] /= m[i][i];
+    const x = new Array(n);
+    for (let i = 0; i < n; i++) {
+      const xi = x[i] = vector ? [b2[permutation[i]]] : Array.from(b2[permutation[i]]), mi = m[i];
+      for (let k = 0; k < i; k++) {
+        const f = mi[k], xk = x[k];
+        if (f !== 0) for (let c2 = 0; c2 < columns; c2++) xi[c2] -= f * xk[c2];
       }
+    }
+    for (let i = n - 1; i >= 0; i--) {
+      const xi = x[i], mi = m[i];
+      for (let k = i + 1; k < n; k++) {
+        const f = mi[k], xk = x[k];
+        if (f !== 0) for (let c2 = 0; c2 < columns; c2++) xi[c2] -= f * xk[c2];
+      }
+      for (let c2 = 0; c2 < columns; c2++) xi[c2] /= mi[i];
     }
     return vector ? x.map((row) => row[0]) : x;
   }
@@ -862,17 +878,16 @@ var science = (() => {
 
   // src/stats/erf.js
   var TWO_OVER_SQRT_PI = 2 / Math.sqrt(Math.PI);
-  var ONE_OVER_SQRT_PI = 1 / Math.sqrt(Math.PI);
-  var ERF_SERIES_LIMIT = 2;
-  var ERFC_FRACTION_LIMIT = 1;
   function erf(x) {
     if (Number.isNaN(x) || x === 0) return x;
-    const a2 = Math.abs(x), y = a2 < ERF_SERIES_LIMIT ? erfSeries(a2) : 1 - erfcContinuedFraction(a2);
+    const a2 = Math.abs(x), y = a2 < 0.5 ? erfSeries(a2) : 1 - erfcPositive(a2);
     return x < 0 ? -y : y;
   }
   function erfc(x) {
     if (Number.isNaN(x)) return NaN;
-    return x < ERFC_FRACTION_LIMIT ? 1 - erf(x) : erfcContinuedFraction(x);
+    if (x <= -0.5) return 2 - erfcPositive(-x);
+    if (x < 0.5) return 1 - erf(x);
+    return erfcPositive(x);
   }
   function erfSeries(x) {
     const x2 = 2 * x * x;
@@ -883,23 +898,85 @@ var science = (() => {
     }
     return TWO_OVER_SQRT_PI * Math.exp(-x * x) * sum;
   }
-  function erfcContinuedFraction(x) {
-    if (x === Infinity) return 0;
-    const tiny = 1e-300;
-    let f = x, c2 = x, d2 = 0;
-    for (let k = 1; k < 1e3; k++) {
-      const a2 = k / 2;
-      d2 = x + a2 * d2;
-      if (d2 === 0) d2 = tiny;
-      c2 = x + a2 / c2;
-      if (c2 === 0) c2 = tiny;
-      d2 = 1 / d2;
-      const delta = c2 * d2;
-      f *= delta;
-      if (Math.abs(delta - 1) < 1e-16) break;
+  var G = [
+    [
+      -2.3194577541483,
+      0.10773148055689316,
+      0.0019579096098603574,
+      76647902563401e-19,
+      -2122801400080643e-21,
+      -11305154404718577e-23,
+      -6762761498894301e-25,
+      26138817645357993e-26,
+      14170816340307623e-27,
+      -19981614162290126e-29,
+      -5821735255347536e-29,
+      -16850633885159191e-31,
+      16460316501217129e-32,
+      13207093734421784e-33
+    ],
+    [
+      -1.8576530907291056,
+      0.12302299515368256,
+      0.0017771289704500788,
+      -4210821648466003e-20,
+      -3776632118610938e-21,
+      -1300310609753077e-23,
+      8810616835450316e-24,
+      19885336516158347e-26,
+      -23476967438473282e-27,
+      -8967629855128368e-28,
+      7243191744414293e-29,
+      3397241565926125e-30,
+      -2603268781963852e-31,
+      -11496959904090988e-33
+    ],
+    [
+      -1.3417062129189457,
+      0.1342490198693356,
+      9390205857296584e-19,
+      -9291846698333768e-20,
+      -19535147489760565e-22,
+      17326256785532582e-23,
+      34936548212218308e-25,
+      -4572261996640394e-25,
+      -31031989613964023e-28,
+      13095062244049796e-28,
+      -17087385345951227e-30,
+      -3403537234895309e-30,
+      13455374073326626e-32,
+      6345670160970927e-33
+    ],
+    [
+      -0.7971386149285049,
+      0.1370419470797222,
+      -2457635734330582e-19,
+      -9598165327468248e-20,
+      14065261981649073e-22,
+      12625440891936126e-23,
+      -5609519603377978e-24,
+      -9751993377779212e-26,
+      1511495020128536e-26,
+      -29670018619853556e-29,
+      -24028482526024857e-30,
+      16078046430711497e-31,
+      -6526577633450537e-33,
+      -35570449501543785e-34
+    ]
+  ];
+  function erfcPositive(z) {
+    if (z === Infinity) return 0;
+    const t = 2 / (2 + z), u = 2 * t - 1, piece = Math.min(3, Math.floor((u + 1) / 0.4)), s = (u + 0.8 - 0.4 * piece) / 0.2, c2 = G[piece];
+    let b1 = 0, b2 = 0;
+    for (let j = c2.length - 1; j > 0; j--) {
+      const b3 = 2 * s * b1 - b2 + c2[j];
+      b2 = b1;
+      b1 = b3;
     }
-    const xh = Math.round(x * 16) / 16;
-    return ONE_OVER_SQRT_PI * Math.exp(-xh * xh) * Math.exp(-(x - xh) * (x + xh)) / f;
+    const g = s * b1 - b2 + c2[0] / 2;
+    if (z < 2) return t * Math.exp(g - z * z);
+    const zh = Math.round(z * 16) / 16;
+    return t * Math.exp(-zh * zh) * Math.exp(g - (z - zh) * (z + zh));
   }
 
   // src/stats/normal.js
@@ -1179,12 +1256,13 @@ var science = (() => {
     }
     if (n === 1) return clusters[0];
     for (let i = 0; i < n; i++) {
+      distMatrix[i] = new Array(n);
+      distMatrix[i][i] = Infinity;
+      for (let j = 0; j < i; j++) distMatrix[i][j] = distMatrix[j][i] = distance(vectors[i], vectors[j]);
+    }
+    for (let i = 0; i < n; i++) {
       dMin[i] = 0;
-      distMatrix[i] = [];
-      for (let j = 0; j < n; j++) {
-        distMatrix[i][j] = i === j ? Infinity : distance(vectors[i], vectors[j]);
-        if (distMatrix[i][dMin[i]] > distMatrix[i][j]) dMin[i] = j;
-      }
+      for (let j = 0; j < n; j++) if (distMatrix[i][dMin[i]] > distMatrix[i][j]) dMin[i] = j;
     }
     let root;
     for (let p = 0; p < n - 1; p++) {
@@ -1200,7 +1278,7 @@ var science = (() => {
         size: left.size + right.size,
         depth: 1 + Math.max(left.depth, right.depth),
         index: n + p,
-        centroid: left.centroid.map((v, i) => (left.size * v + right.size * right.centroid[i]) / (left.size + right.size))
+        centroid: mergeCentroids(left, right)
       };
       for (let j = 0; j < n; j++) {
         if (j === c1 || j === c2) continue;
@@ -1226,6 +1304,11 @@ var science = (() => {
       }
     }
     return root;
+  }
+  function mergeCentroids(a2, b2) {
+    const n = a2.centroid.length, size = a2.size + b2.size, centroid = new Array(n);
+    for (let i = 0; i < n; i++) centroid[i] = (a2.size * a2.centroid[i] + b2.size * b2.centroid[i]) / size;
+    return centroid;
   }
 
   // src/stats/loess.js
@@ -1256,16 +1339,15 @@ var science = (() => {
     if (n <= 2) return Array.from(y);
     const bandwidthInPoints = Math.floor(bandwidth * n);
     if (bandwidthInPoints < 2) throw new RangeError("bandwidth is too small for the number of points.");
-    const m = points.length, q = Math.min(bandwidthInPoints, m), res = new Array(n).fill(0), residuals = new Array(n).fill(0), robustnessWeights = new Array(n).fill(1);
+    const m = points.length, q = Math.min(bandwidthInPoints, m), res = new Array(n).fill(0), residuals = new Array(n).fill(0), robustnessWeights = new Array(n).fill(1), w = new Float64Array(m);
     function localFit(lo, hi, xi, h, local, robust) {
       let sumWeights = 0, sumX = 0, sumY = 0;
-      const w = [];
       for (let k = lo; k <= hi; k++) {
         const p = points[k];
         let wk = weights[p];
         if (robust) wk *= robustnessWeights[p];
         if (local && h > 0) wk *= tricube(Math.abs(x[p] - xi) / h);
-        w.push(wk);
+        w[k] = wk;
         sumWeights += wk;
         sumX += wk * (x[p] - xi);
         sumY += wk * y[p];
@@ -1275,8 +1357,8 @@ var science = (() => {
       let sumXX = 0, sumXY = 0;
       for (let k = lo; k <= hi; k++) {
         const p = points[k], dx = x[p] - xi - meanX;
-        sumXX += w[k - lo] * dx * dx;
-        sumXY += w[k - lo] * dx * (y[p] - meanY);
+        sumXX += w[k] * dx * dx;
+        sumXY += w[k] * dx * (y[p] - meanY);
       }
       const beta = Math.sqrt(sumXX / sumWeights) < accuracy || !sumXX ? 0 : sumXY / sumXX;
       return meanY - beta * meanX;

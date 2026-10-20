@@ -12,19 +12,30 @@ export function multiply(a, b) {
   if (b.length && typeof b[0] === "number") {
     requireFiniteNumbers(b, "b");
     if (b.length !== inner) throw new RangeError(`Cannot multiply a ${rows}×${inner} matrix by a vector of length ${b.length}.`);
-    return Array.from({length: rows}, (_, i) => {
+    const ab = new Array(rows);
+    for (let i = 0; i < rows; i++) {
+      const ai = a[i];
       let s = 0;
-      for (let k = 0; k < inner; k++) s += a[i][k] * b[k];
-      return s;
-    });
+      for (let k = 0; k < inner; k++) s += ai[k] * b[k];
+      ab[i] = s;
+    }
+    return ab;
   }
   const [bRows, columns] = requireMatrix(b, "b");
   if (bRows !== inner) throw new RangeError(`Cannot multiply a ${rows}×${inner} matrix by a ${bRows}×${columns} matrix.`);
-  return Array.from({length: rows}, (_, i) => Array.from({length: columns}, (_, j) => {
-    let s = 0;
-    for (let k = 0; k < inner; k++) s += a[i][k] * b[k][j];
-    return s;
-  }));
+  // Accumulate whole rows of b, which reads every array in order.
+  const ab = new Array(rows);
+  for (let i = 0; i < rows; i++) {
+    const ai = a[i],
+          row = new Array(columns).fill(0);
+    for (let k = 0; k < inner; k++) {
+      const f = ai[k],
+            bk = b[k];
+      for (let j = 0; j < columns; j++) row[j] += f * bk[j];
+    }
+    ab[i] = row;
+  }
+  return ab;
 }
 
 // LU decomposition with partial pivoting of a copy of the square matrix a.
@@ -79,14 +90,27 @@ export function solve(a, b) {
     if (!(Math.abs(m[i][i]) > tolerance)) throw new RangeError("Matrix is singular.");
   }
 
-  const x = Array.from({length: n}, (_, i) => vector ? [b[permutation[i]]] : Array.from(b[permutation[i]]));
-  for (let c = 0; c < columns; c++) {
-    // Forward substitution with L, then back substitution with U.
-    for (let i = 0; i < n; i++) for (let k = 0; k < i; k++) x[i][c] -= m[i][k] * x[k][c];
-    for (let i = n - 1; i >= 0; i--) {
-      for (let k = i + 1; k < n; k++) x[i][c] -= m[i][k] * x[k][c];
-      x[i][c] /= m[i][i];
+  // Forward substitution with L, then back substitution with U, a row of
+  // right-hand sides at a time.
+  const x = new Array(n);
+  for (let i = 0; i < n; i++) {
+    const xi = x[i] = vector ? [b[permutation[i]]] : Array.from(b[permutation[i]]),
+          mi = m[i];
+    for (let k = 0; k < i; k++) {
+      const f = mi[k],
+            xk = x[k];
+      if (f !== 0) for (let c = 0; c < columns; c++) xi[c] -= f * xk[c];
     }
+  }
+  for (let i = n - 1; i >= 0; i--) {
+    const xi = x[i],
+          mi = m[i];
+    for (let k = i + 1; k < n; k++) {
+      const f = mi[k],
+            xk = x[k];
+      if (f !== 0) for (let c = 0; c < columns; c++) xi[c] -= f * xk[c];
+    }
+    for (let c = 0; c < columns; c++) xi[c] /= mi[i];
   }
   return vector ? x.map((row) => row[0]) : x;
 }

@@ -136,8 +136,9 @@ The distribution is an object with these properties and methods:
 
 * *mean* and *sd*: the parameters.
 * *pdf*(*x*): the probability density at *x*.
-* *cdf*(*x*): the cumulative probability at *x*, accurate to about 1e-15
-  relative error, even far into the tails.
+* *cdf*(*x*): the cumulative probability at *x*, with a relative error of about
+  1e-14 within 8 standard deviations of the mean, and about 1e-13 even far into
+  the tails.
 * *quantile*(*p*): the inverse of *cdf*, for a probability *p* between 0 and 1.
 * *sample*([*random*]): a random number drawn from the distribution, using the
   [Marsaglia polar method](https://en.wikipedia.org/wiki/Marsaglia_polar_method).
