@@ -1047,6 +1047,9 @@ function science_stats_kmeansRandom(k, vectors) {
 science.stats.hcluster = function() {
   var distance = science.stats.distance.euclidean, linkage = "single";
   function hcluster(vectors) {
+    if (linkage !== "single" && linkage !== "complete" && linkage !== "average") {
+      throw { error: "Unknown linkage: " + linkage };
+    }
     var n = vectors.length, dMin = [], cSize = [], distMatrix = [], clusters = [], c1, c2, c1Cluster, c2Cluster, p, root, i, j;
     i = -1;
     while (++i < n) {
@@ -1093,8 +1096,8 @@ science.stats.hcluster = function() {
         depth: 1 + Math.max(c1Cluster.depth, c2Cluster.depth)
       };
       clusters[c1].splice(0, 0, newCluster);
-      cSize[c1] += cSize[c2];
       for (j = 0; j < n; j++) {
+        if (j === c1 || j === c2) continue;
         switch (linkage) {
           case "single":
             if (distMatrix[c1][j] > distMatrix[c2][j])
@@ -1105,21 +1108,32 @@ science.stats.hcluster = function() {
               distMatrix[j][c1] = distMatrix[c1][j] = distMatrix[c2][j];
             break;
           case "average":
-            distMatrix[j][c1] = distMatrix[c1][j] = (cSize[c1] * distMatrix[c1][j] + cSize[c2] * distMatrix[c2][j]) / (cSize[c1] + cSize[j]);
+            distMatrix[j][c1] = distMatrix[c1][j] = (cSize[c1] * distMatrix[c1][j] + cSize[c2] * distMatrix[c2][j]) / (cSize[c1] + cSize[c2]);
             break;
         }
       }
-      distMatrix[c1][c1] = Infinity;
+      cSize[c1] += cSize[c2];
       for (i = 0; i < n; i++)
         distMatrix[i][c2] = distMatrix[c2][i] = Infinity;
       for (j = 0; j < n; j++) {
-        if (dMin[j] == c2) dMin[j] = c1;
+        if (linkage === "single") {
+          if (dMin[j] == c2) dMin[j] = c1;
+        } else if (dMin[j] == c1 || dMin[j] == c2) {
+          for (var k = 0; k < n; k++) {
+            if (distMatrix[j][k] < distMatrix[j][dMin[j]]) dMin[j] = k;
+          }
+        }
         if (distMatrix[c1][j] < distMatrix[c1][dMin[c1]]) dMin[c1] = j;
       }
       root = newCluster;
     }
     return root;
   }
+  hcluster.linkage = function(x) {
+    if (!arguments.length) return linkage;
+    linkage = x;
+    return hcluster;
+  };
   hcluster.distance = function(x) {
     if (!arguments.length) return distance;
     distance = x;
