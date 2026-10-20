@@ -1,29 +1,25 @@
 {
   "name": "science",
   "version": "1.9.3",
-  "type": "module",
-  "main": "./index.js",
-  "exports": {
-    ".": {
-      "import": "./index.js",
-      "default": "./index.js"
-    }
-  },
+  "license": "BSD-3-Clause",
   "description": "Scientific and statistical computing in JavaScript.",
   "keywords": [
     "science",
     "statistics",
     "mathematics"
   ],
+  "type": "module",
   "homepage": "https://github.com/jasondavies/science.js",
   "author": {
     "name": "Jason Davies",
-    "url": "http://www.jasondavies.com/"
+    "url": "https://www.jasondavies.com/"
   },
   "repository": {
     "type": "git",
-    "url": "http://github.com/jasondavies/science.js.git"
+    "url": "git+https://github.com/jasondavies/science.js.git"
   },
+  "main": "./index.js",
+  "exports": "./index.js",
   "files": [
     "dist/",
     "index.js",
@@ -33,7 +29,10 @@
   "scripts": {
     "build": "mkdir -p dist && esbuild src/index.js --bundle --format=iife --platform=browser --banner:js='var science = globalThis.science || (globalThis.science = {});' --footer:js='globalThis.science = science;' --outfile=dist/science.js && esbuild src/index.js --bundle --format=iife --platform=browser --minify --banner:js='var science = globalThis.science || (globalThis.science = {});' --footer:js='globalThis.science = science;' --outfile=dist/science.min.js",
     "clean": "rm -f dist/science.js dist/science.min.js",
-    "test": "npm run build && node --test test/core/*-test.js test/lin/*-test.js test/stats/*-test.js test/stats/distribution/*-test.js"
+    "test": "npm run build && node test/index.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "devDependencies": {
     "esbuild": "0.25.10"

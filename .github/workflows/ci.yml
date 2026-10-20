@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['18.0.0', 18, 20, 22, 24]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          package-manager-cache: false
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Run tests
+        run: npm test
+      - name: Check committed bundles match the build
+        run: git diff --exit-code -- dist
+      - name: Check every test file is run
+        shell: bash
+        run: |
+          diff <(find test -name '*-test.js' | sed 's#^test/#./#' | sort) \
+               <(sed -n 's/^import "\(.*\)";$/\1/p' test/index.js | sort)
+      - name: Check package contents and installed import
+        shell: bash
+        run: |
+          pack_dir=$(mktemp -d)
+          trap 'rm -rf "$pack_dir"' EXIT
+          npm pack --ignore-scripts --json --pack-destination "$pack_dir" > "$pack_dir/pack.json"
+          node --input-type=module - "$pack_dir/pack.json" <<'JS'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+
+          const [pack] = JSON.parse(readFileSync(process.argv[2], 'utf8'));
+          assert.deepEqual(pack.files.map(file => file.path).sort(), [
+            'LICENSE', 'README.md', 'dist/science.js', 'dist/science.min.js', 'index.js', 'package.json'
+          ]);
+          JS
+          mkdir "$pack_dir/consumer"
+          cd "$pack_dir/consumer"
+          npm install --offline --ignore-scripts --no-audit --no-fund --package-lock=false "$pack_dir"/*.tgz
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          import { runInNewContext } from 'node:vm';
+          import science, { science as named } from 'science';
+
+          const { version } = JSON.parse(readFileSync('node_modules/science/package.json', 'utf8'));
+          assert.equal(named, science);
+          assert.equal(science.version, version);
+          assert.deepEqual(science.stats.loess().bandwidth(.6)([1, 2, 3, 4, 5], [2, 4, 6, 8, 10]), [2, 4, 6, 8, 10]);
+
+          for (const file of ['science.js', 'science.min.js']) {
+            const context = {};
+            context.globalThis = context;
+            runInNewContext(readFileSync(`node_modules/science/dist/${file}`, 'utf8'), context);
+            assert.deepEqual(Object.keys(context).filter(key => key !== 'globalThis'), ['science'], file);
+            assert.equal(context.science.version, version, file);
+          }
+          JS

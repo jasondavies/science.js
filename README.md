@@ -18,6 +18,13 @@ Then import it as an ES module:
 import science from "science";
 ```
 
+The package is ESM-only. CommonJS code can still load it on Node.js 20.19+ or
+22.12+, where `require` supports ES modules:
+
+```javascript
+const { science } = require("science");
+```
+
 In a browser, you can instead load `dist/science.min.js` with a `<script>` tag,
 which defines a global `science`.
 
