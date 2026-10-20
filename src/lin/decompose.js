@@ -25,10 +25,10 @@ science.lin.decompose = function() {
     if (symmetric) {
       for (var i = 0; i < n; i++) V[i] = A[i].slice();
 
-      // Tridiagonalize.
+      // Tridiagonalise.
       science_lin_decomposeTred2(d, e, V);
 
-      // Diagonalize.
+      // Diagonalise.
       science_lin_decomposeTql2(d, e, V);
     } else {
       var H = [];

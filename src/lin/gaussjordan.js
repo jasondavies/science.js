@@ -55,7 +55,7 @@ science.lin.gaussjordan = function(m, eps) {
       }
     }
     m[y][y] /= c;
-    // Normalize row y.
+    // Normalise row y.
     x = h - 1; while (++x < w) {
       m[y][x] /= c;
     }
